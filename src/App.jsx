@@ -553,7 +553,7 @@ export default function App() {
   );
 
   // ★ 投げ銭URLはここを差し替えるだけ
-  const DONATION_URL = "https://ko-fi.com/YOUR_ID";
+  const DONATION_URL = "https://ko-fi.com/stoneoraclee";
 
   const PREMIUM_FEATURES = [
     { icon: "💎", title: "手持ち石の登録・管理", desc: "自分のコレクションを登録して組み合わせを管理" },
