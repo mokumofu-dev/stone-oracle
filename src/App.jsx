@@ -115,6 +115,26 @@ const GRADE = (s) => s >= 90 ? { label: "最高の相性", color: "#C8902A" } :
 
 const EFFECT_LABELS = { love: "恋愛運", healing: "癒し", money: "金運", protection: "守護", growth: "成長" };
 
+const ELEMENT_INFO = {
+  火: "情熱・行動力・エネルギーの属性。物事を推進する力を象徴します。",
+  水: "感情・直感・癒しの属性。心の内側や人間関係に働きかけます。",
+  地: "安定・現実性・グラウンディングの属性。地に足をつける力を象徴します。",
+  風: "知性・直感・変化の属性。思考をクリアにし、新しい視点をもたらします。",
+  光: "浄化・調和・増幅の属性。あらゆるエネルギーを清め、高めます。",
+  宇宙: "高次元・覚醒・変容の属性。強い精神的な変化をもたらします。",
+};
+
+const CHAKRA_INFO = {
+  ルート: "尾てい骨付近にある第1チャクラ。安心感・生命力・現実的な基盤に関わります。",
+  仙骨: "下腹部にある第2チャクラ。creativity・感情・人間関係の豊かさに関わります。",
+  太陽神経叢: "みぞおち付近の第3チャクラ。自信・意志力・行動力に関わります。",
+  ハート: "胸の中心の第4チャクラ。愛・思いやり・人とのつながりに関わります。",
+  喉: "喉元の第5チャクラ。自己表現・コミュニケーションに関わります。",
+  第三の目: "眉間の第6チャクラ。直感・洞察力・内なる視覚に関わります。",
+  冠: "頭頂部の第7チャクラ。精神性・宇宙とのつながり・悟りに関わります。",
+  全て: "特定のチャクラに限らず、すべてのチャクラに働きかける石です。",
+};
+
 // Generate top N combos of `size` stones (including base) ranked by avg pairwise compatibility
 const generatePatterns = (baseStone, size, limit = 10) => {
   const others = STONES.filter(s => s.id !== baseStone.id);
@@ -151,6 +171,7 @@ export default function App() {
   const [searchQ, setSearchQ] = useState("");
   const [filterEl, setFilterEl] = useState("");
   const [detailStone, setDetailStone] = useState(null);
+  const [openTerm, setOpenTerm] = useState(null); // "属性" | "チャクラ" | null
   const [result, setResult] = useState(null);
   const [showStoneSelector, setShowStoneSelector] = useState(false);
   const [selectingSlot, setSelectingSlot] = useState(null);
@@ -490,7 +511,7 @@ export default function App() {
   };
 
   const StoneCard = ({ stone, onSelect, selected: isSelected }) => (
-    <div onClick={() => onSelect ? onSelect(stone) : setDetailStone(stone)} style={{
+    <div onClick={() => { if (onSelect) { onSelect(stone); } else { setOpenTerm(null); setDetailStone(stone); } }} style={{
       background: isSelected ? stone.bg : "#FAFAF8",
       border: isSelected ? `2px solid ${stone.color}` : "1px solid #EDE8E2",
       borderRadius: 14,
@@ -1243,7 +1264,7 @@ export default function App() {
         <div style={{
           position: "fixed", inset: 0, background: "rgba(40,30,20,0.5)",
           zIndex: 200, display: "flex", alignItems: "flex-end",
-        }} onClick={() => setDetailStone(null)}>
+        }} onClick={() => { setDetailStone(null); setOpenTerm(null); }}>
           <div onClick={e => e.stopPropagation()} style={{
             background: "#FFFDF9",
             borderRadius: "20px 20px 0 0",
@@ -1256,17 +1277,38 @@ export default function App() {
                 <div style={{ fontSize: 18, fontWeight: 600, color: "#3A2E28", fontFamily: "'Cormorant Garamond', serif" }}>{detailStone.name}</div>
                 <div style={{ fontSize: 11, color: "#B0A898", letterSpacing: "0.1em" }}>{detailStone.en.toUpperCase()}</div>
               </div>
-              <button onClick={() => setDetailStone(null)} style={{ marginLeft: "auto", background: "none", border: "none", fontSize: 20, color: "#B0A898", cursor: "pointer" }}>✕</button>
+              <button onClick={() => { setDetailStone(null); setOpenTerm(null); }} style={{ marginLeft: "auto", background: "none", border: "none", fontSize: 20, color: "#B0A898", cursor: "pointer" }}>✕</button>
             </div>
             <p style={{ fontSize: 13, color: "#6A5A4A", lineHeight: 1.8, marginBottom: 16, fontFamily: "'Noto Serif JP', serif" }}>{detailStone.desc}</p>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
               {[["属性", detailStone.element], ["チャクラ", detailStone.chakra]].map(([k, v]) => (
                 <div key={k} style={{ background: detailStone.bg, borderRadius: 10, padding: "10px 12px" }}>
-                  <div style={{ fontSize: 10, color: "#B0A898", marginBottom: 2 }}>{k}</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 2 }}>
+                    <div style={{ fontSize: 10, color: "#B0A898" }}>{k}</div>
+                    <button onClick={() => setOpenTerm(openTerm === k ? null : k)} style={{
+                      width: 14, height: 14, borderRadius: "50%",
+                      border: `1px solid ${detailStone.color}88`,
+                      background: openTerm === k ? detailStone.color : "none",
+                      color: openTerm === k ? "#FFFDF9" : detailStone.color,
+                      fontSize: 9, lineHeight: "12px", fontFamily: "Georgia, serif",
+                      cursor: "pointer", padding: 0,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}>?</button>
+                  </div>
                   <div style={{ fontSize: 13, fontWeight: 600, color: detailStone.color }}>{v}</div>
                 </div>
               ))}
             </div>
+            {openTerm && (
+              <div style={{
+                background: "#FBF3E8", border: "1px solid #E8D8CC", borderRadius: 10,
+                padding: "10px 12px", marginBottom: 16,
+                fontSize: 11, color: "#6A5A4A", lineHeight: 1.7,
+                fontFamily: "'Noto Serif JP', serif",
+              }}>
+                {openTerm === "属性" ? ELEMENT_INFO[detailStone.element] : CHAKRA_INFO[detailStone.chakra]}
+              </div>
+            )}
             {Object.entries(EFFECT_LABELS).map(([k, label]) => (
               <div key={k} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
                 <div style={{ fontSize: 11, color: "#8A7A6A", width: 50, flexShrink: 0 }}>{label}</div>
