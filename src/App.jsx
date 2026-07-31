@@ -127,6 +127,9 @@ export default function App() {
   const [myStones, setMyStones] = useState([]);
   const [diagMode, setDiagMode] = useState(2); // 2 or 3
   const [rankingStone, setRankingStone] = useState(null);
+  const [aiResult, setAiResult] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState(null);
 
   const MAX_FREE = 3;
 
@@ -157,12 +160,36 @@ export default function App() {
     const count = diagMode;
     const stones = selected.slice(0, count).filter(Boolean);
     if (stones.length < count) return;
+    setAiResult(null);
+    setAiError(null);
+    setAiLoading(false);
     if (count === 2) {
       const r = getCompatScore(stones[0], stones[1]);
       setResult({ type: 2, ...r, stones, grade: GRADE(r.score) });
     } else {
       const r = getThreeStoneCompat(stones);
       setResult({ type: 3, ...r, stones, grade: GRADE(r.score) });
+    }
+  };
+
+  const fetchAiKantei = async (stones) => {
+    setAiLoading(true);
+    setAiError(null);
+    try {
+      const res = await fetch("/.netlify/functions/kantei", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          stones: stones.map(s => ({ name: s.name, element: s.element, chakra: s.chakra, keywords: s.keywords })),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "鑑定に失敗しました");
+      setAiResult(data.result);
+    } catch {
+      setAiError("鑑定に失敗しました。もう一度お試しください");
+    } finally {
+      setAiLoading(false);
     }
   };
 
@@ -274,6 +301,68 @@ export default function App() {
               <span style={{ fontSize: 11, color: "#5A4A3A", fontFamily: "'Noto Serif JP', serif" }}>{s.name}</span>
             </div>
           ))}
+        </div>
+
+        {/* AI kantei */}
+        <div style={{ marginBottom: 20 }}>
+          {!aiResult && !aiLoading && !aiError && (
+            <button onClick={() => fetchAiKantei(stones)} style={{
+              width: "100%",
+              padding: "13px",
+              background: "linear-gradient(135deg, #C8902A, #B57A20)",
+              color: "#FFFDF9",
+              border: "none",
+              borderRadius: 14,
+              fontSize: 13,
+              fontFamily: "'Noto Serif JP', serif",
+              fontWeight: 600,
+              cursor: "pointer",
+              letterSpacing: "0.08em",
+            }}>✦ AI鑑定を見る</button>
+          )}
+
+          {aiLoading && (
+            <div style={{
+              display: "flex", flexDirection: "column", alignItems: "center", gap: 10,
+              padding: "20px 0",
+            }}>
+              <div style={{
+                width: 28, height: 28, borderRadius: "50%",
+                border: "3px solid #EDE0CC", borderTopColor: "#C8902A",
+                animation: "spin 0.9s linear infinite",
+              }} />
+              <div style={{ fontSize: 12, color: "#B0A898", fontFamily: "'Noto Serif JP', serif", letterSpacing: "0.1em" }}>鑑定中...</div>
+            </div>
+          )}
+
+          {aiError && (
+            <div style={{
+              textAlign: "center", fontSize: 12, color: "#C85A5A",
+              fontFamily: "'Noto Serif JP', serif", padding: "8px 0",
+            }}>
+              {aiError}
+              <div>
+                <button onClick={() => fetchAiKantei(stones)} style={{
+                  marginTop: 8, background: "none", border: "1px solid #C85A5A",
+                  color: "#C85A5A", borderRadius: 20, padding: "4px 14px",
+                  fontSize: 11, cursor: "pointer", fontFamily: "'Noto Serif JP', serif",
+                }}>もう一度試す</button>
+              </div>
+            </div>
+          )}
+
+          {aiResult && (
+            <div style={{
+              background: "linear-gradient(135deg, #FBF3E8, #FDF8F0)",
+              border: "1px solid #E8D8B8",
+              borderRadius: 16,
+              padding: "18px 18px",
+              position: "relative",
+            }}>
+              <div style={{ fontSize: 11, color: "#C8902A", letterSpacing: "0.2em", marginBottom: 10, textAlign: "center" }}>✦ AI鑑定 ✦</div>
+              <p style={{ fontSize: 13, color: "#5A4A3A", lineHeight: 2, fontFamily: "'Noto Serif JP', serif", whiteSpace: "pre-wrap" }}>{aiResult}</p>
+            </div>
+          )}
         </div>
 
         {/* Best3 next stones */}
@@ -699,6 +788,7 @@ export default function App() {
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;600&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
         input::placeholder { color: #C0B8B0; }
+        @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
 
       {/* Header */}
