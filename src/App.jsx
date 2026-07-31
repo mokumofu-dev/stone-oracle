@@ -115,26 +115,6 @@ const GRADE = (s) => s >= 90 ? { label: "最高の相性", color: "#C8902A" } :
 
 const EFFECT_LABELS = { love: "恋愛運", healing: "癒し", money: "金運", protection: "守護", growth: "成長" };
 
-const ELEMENT_INFO = {
-  火: "情熱・行動力・エネルギーの属性。物事を推進する力を象徴します。",
-  水: "感情・直感・癒しの属性。心の内側や人間関係に働きかけます。",
-  地: "安定・現実性・グラウンディングの属性。地に足をつける力を象徴します。",
-  風: "知性・直感・変化の属性。思考をクリアにし、新しい視点をもたらします。",
-  光: "浄化・調和・増幅の属性。あらゆるエネルギーを清め、高めます。",
-  宇宙: "高次元・覚醒・変容の属性。強い精神的な変化をもたらします。",
-};
-
-const CHAKRA_INFO = {
-  ルート: "尾てい骨付近にある第1チャクラ。安心感・生命力・現実的な基盤に関わります。",
-  仙骨: "下腹部にある第2チャクラ。creativity・感情・人間関係の豊かさに関わります。",
-  太陽神経叢: "みぞおち付近の第3チャクラ。自信・意志力・行動力に関わります。",
-  ハート: "胸の中心の第4チャクラ。愛・思いやり・人とのつながりに関わります。",
-  喉: "喉元の第5チャクラ。自己表現・コミュニケーションに関わります。",
-  第三の目: "眉間の第6チャクラ。直感・洞察力・内なる視覚に関わります。",
-  冠: "頭頂部の第7チャクラ。精神性・宇宙とのつながり・悟りに関わります。",
-  全て: "特定のチャクラに限らず、すべてのチャクラに働きかける石です。",
-};
-
 // Generate top N combos of `size` stones (including base) ranked by avg pairwise compatibility
 const generatePatterns = (baseStone, size, limit = 10) => {
   const others = STONES.filter(s => s.id !== baseStone.id);
@@ -165,13 +145,32 @@ const generatePatterns = (baseStone, size, limit = 10) => {
 const getPurposeRanking = (key, limit = 10) =>
   [...STONES].sort((a, b) => b.effects[key] - a.effects[key]).slice(0, limit);
 
+const ELEMENT_INFO = {
+  火: "情熱・行動力・エネルギーの属性。物事を推進する力を象徴します。",
+  水: "感情・直感・癒しの属性。心の内側や人間関係に働きかけます。",
+  地: "安定・現実性・グラウンディングの属性。地に足をつける力を象徴します。",
+  風: "知性・直感・変化の属性。思考をクリアにし、新しい視点をもたらします。",
+  光: "浄化・調和・増幅の属性。あらゆるエネルギーを清め、高めます。",
+  宇宙: "高次元・覚醒・変容の属性。強い精神的な変化をもたらします。",
+};
+
+const CHAKRA_INFO = {
+  ルート: "尾てい骨付近にある第1チャクラ。安心感・生命力・現実的な基盤に関わります。",
+  仙骨: "下腹部にある第2チャクラ。創造性・感情・人間関係の豊かさに関わります。",
+  太陽神経叢: "みぞおち付近の第3チャクラ。自信・意志力・行動力に関わります。",
+  ハート: "胸の中心の第4チャクラ。愛・思いやり・人とのつながりに関わります。",
+  喉: "喉元の第5チャクラ。自己表現・コミュニケーションに関わります。",
+  第三の目: "眉間の第6チャクラ。直感・洞察力・内なる視覚に関わります。",
+  冠: "頭頂部の第7チャクラ。精神性・宇宙とのつながり・悟りに関わります。",
+  全て: "特定のチャクラに限らず、すべてのチャクラに働きかける石です。",
+};
+
 export default function App() {
   const [tab, setTab] = useState("diagnose"); // diagnose | search | mystone
   const [selected, setSelected] = useState([]);
   const [searchQ, setSearchQ] = useState("");
   const [filterEl, setFilterEl] = useState("");
   const [detailStone, setDetailStone] = useState(null);
-  const [openTerm, setOpenTerm] = useState(null); // "属性" | "チャクラ" | null
   const [result, setResult] = useState(null);
   const [showStoneSelector, setShowStoneSelector] = useState(false);
   const [selectingSlot, setSelectingSlot] = useState(null);
@@ -180,6 +179,11 @@ export default function App() {
   });
   const [diagMode, setDiagMode] = useState(2); // 2 or 3
   const [rankingStone, setRankingStone] = useState(null);
+  const [aiResult, setAiResult] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState(null);
+  const [infoPopup, setInfoPopup] = useState(null); // { type: 'element'|'chakra', key: string } | null
+
   const [premiumSubTab, setPremiumSubTab] = useState("mystones"); // mystones | pattern | purpose
   const [patternBase, setPatternBase] = useState(null);
   const [patternSize, setPatternSize] = useState(3); // 3 or 4
@@ -187,9 +191,8 @@ export default function App() {
   const [showMyStoneSelector, setShowMyStoneSelector] = useState(false);
   const [showPatternSelector, setShowPatternSelector] = useState(false);
   const [legalModal, setLegalModal] = useState(null); // "about" | "terms" | "privacy" | "contact" | null
-  const [aiResult, setAiResult] = useState(null);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiError, setAiError] = useState(null);
+  const [contactStatus, setContactStatus] = useState("idle"); // idle | sending | sent
+  const [contactForm, setContactForm] = useState({ name: "", email: "", message: "" });
 
   const toggleMyStone = (stoneId) => {
     setMyStones(prev => {
@@ -511,7 +514,7 @@ export default function App() {
   };
 
   const StoneCard = ({ stone, onSelect, selected: isSelected }) => (
-    <div onClick={() => { if (onSelect) { onSelect(stone); } else { setOpenTerm(null); setDetailStone(stone); } }} style={{
+    <div onClick={() => onSelect ? onSelect(stone) : setDetailStone(stone)} style={{
       background: isSelected ? stone.bg : "#FAFAF8",
       border: isSelected ? `2px solid ${stone.color}` : "1px solid #EDE8E2",
       borderRadius: 14,
@@ -713,10 +716,9 @@ export default function App() {
               return (
                 <div key={s.id} style={{
                   display: "flex", alignItems: "center", gap: 12,
-                  background: "#FAFAF8",
+                  background: idx < 3 ? s.bg : "#FAFAF8",
                   border: idx < 3 ? `1px solid ${s.color}44` : "1px solid #EDE8E2",
                   borderRadius: 14, padding: "12px 14px",
-                  background: idx < 3 ? s.bg : "#FAFAF8",
                 }}>
                   <div style={{ fontSize: idx < 3 ? 22 : 14, width: 28, textAlign: "center", flexShrink: 0, color: "#B0A898", fontWeight: 600 }}>
                     {idx < 3 ? MEDAL[idx] : `${idx + 1}`}
@@ -746,9 +748,6 @@ export default function App() {
     email: "entry.1789214017",
     message: "entry.782179487",
   };
-
-  const [contactStatus, setContactStatus] = useState("idle"); // idle | sending | sent
-  const [contactForm, setContactForm] = useState({ name: "", email: "", message: "" });
 
   const submitContactForm = async (e) => {
     e.preventDefault();
@@ -1264,7 +1263,7 @@ export default function App() {
         <div style={{
           position: "fixed", inset: 0, background: "rgba(40,30,20,0.5)",
           zIndex: 200, display: "flex", alignItems: "flex-end",
-        }} onClick={() => { setDetailStone(null); setOpenTerm(null); }}>
+        }} onClick={() => setDetailStone(null)}>
           <div onClick={e => e.stopPropagation()} style={{
             background: "#FFFDF9",
             borderRadius: "20px 20px 0 0",
@@ -1277,36 +1276,38 @@ export default function App() {
                 <div style={{ fontSize: 18, fontWeight: 600, color: "#3A2E28", fontFamily: "'Cormorant Garamond', serif" }}>{detailStone.name}</div>
                 <div style={{ fontSize: 11, color: "#B0A898", letterSpacing: "0.1em" }}>{detailStone.en.toUpperCase()}</div>
               </div>
-              <button onClick={() => { setDetailStone(null); setOpenTerm(null); }} style={{ marginLeft: "auto", background: "none", border: "none", fontSize: 20, color: "#B0A898", cursor: "pointer" }}>✕</button>
+              <button onClick={() => setDetailStone(null)} style={{ marginLeft: "auto", background: "none", border: "none", fontSize: 20, color: "#B0A898", cursor: "pointer" }}>✕</button>
             </div>
             <p style={{ fontSize: 13, color: "#6A5A4A", lineHeight: 1.8, marginBottom: 16, fontFamily: "'Noto Serif JP', serif" }}>{detailStone.desc}</p>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
-              {[["属性", detailStone.element], ["チャクラ", detailStone.chakra]].map(([k, v]) => (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
+              {[["属性", detailStone.element, "element"], ["チャクラ", detailStone.chakra, "chakra"]].map(([k, v, infoType]) => (
                 <div key={k} style={{ background: detailStone.bg, borderRadius: 10, padding: "10px 12px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 2 }}>
-                    <div style={{ fontSize: 10, color: "#B0A898" }}>{k}</div>
-                    <button onClick={() => setOpenTerm(openTerm === k ? null : k)} style={{
-                      width: 14, height: 14, borderRadius: "50%",
-                      border: `1px solid ${detailStone.color}88`,
-                      background: openTerm === k ? detailStone.color : "none",
-                      color: openTerm === k ? "#FFFDF9" : detailStone.color,
-                      fontSize: 9, lineHeight: "12px", fontFamily: "Georgia, serif",
-                      cursor: "pointer", padding: 0,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                    }}>?</button>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ fontSize: 10, color: "#B0A898" }}>{k}</span>
+                    <span
+                      onClick={() => setInfoPopup(infoPopup?.type === infoType && infoPopup?.key === v ? null : { type: infoType, key: v })}
+                      style={{
+                        width: 14, height: 14, borderRadius: "50%", background: "#C8902A22", color: "#C8902A",
+                        fontSize: 10, display: "flex", alignItems: "center", justifyContent: "center",
+                        fontFamily: "Georgia, serif", cursor: "pointer", flexShrink: 0,
+                      }}
+                    >?</span>
                   </div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: detailStone.color }}>{v}</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: detailStone.color, marginTop: 2 }}>{v}</div>
                 </div>
               ))}
             </div>
-            {openTerm && (
+            {infoPopup && (
               <div style={{
-                background: "#FBF3E8", border: "1px solid #E8D8CC", borderRadius: 10,
-                padding: "10px 12px", marginBottom: 16,
-                fontSize: 11, color: "#6A5A4A", lineHeight: 1.7,
-                fontFamily: "'Noto Serif JP', serif",
+                background: "#FBF3E8", border: "1px solid #E8D8CC", borderRadius: 12,
+                padding: "12px 14px", marginBottom: 16,
               }}>
-                {openTerm === "属性" ? ELEMENT_INFO[detailStone.element] : CHAKRA_INFO[detailStone.chakra]}
+                <div style={{ fontSize: 11, color: "#C8902A", fontWeight: 600, marginBottom: 4, fontFamily: "'Noto Serif JP', serif" }}>
+                  「{infoPopup.key}」とは？
+                </div>
+                <div style={{ fontSize: 11, color: "#6A5A4A", lineHeight: 1.7, fontFamily: "'Noto Serif JP', serif" }}>
+                  {infoPopup.type === "element" ? ELEMENT_INFO[infoPopup.key] : CHAKRA_INFO[infoPopup.key]}
+                </div>
               </div>
             )}
             {Object.entries(EFFECT_LABELS).map(([k, label]) => (
