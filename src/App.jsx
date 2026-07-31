@@ -115,6 +115,36 @@ const GRADE = (s) => s >= 90 ? { label: "最高の相性", color: "#C8902A" } :
 
 const EFFECT_LABELS = { love: "恋愛運", healing: "癒し", money: "金運", protection: "守護", growth: "成長" };
 
+// Generate top N combos of `size` stones (including base) ranked by avg pairwise compatibility
+const generatePatterns = (baseStone, size, limit = 10) => {
+  const others = STONES.filter(s => s.id !== baseStone.id);
+  const results = [];
+
+  const combine = (start, combo) => {
+    if (combo.length === size - 1) {
+      const group = [baseStone, ...combo];
+      const pairs = [];
+      for (let a = 0; a < group.length; a++) {
+        for (let b = a + 1; b < group.length; b++) {
+          pairs.push(getCompatScore(group[a], group[b]).score);
+        }
+      }
+      const avg = Math.round(pairs.reduce((x, y) => x + y, 0) / pairs.length);
+      results.push({ stones: group, score: avg });
+      return;
+    }
+    for (let i = start; i < others.length; i++) {
+      combine(i + 1, [...combo, others[i]]);
+    }
+  };
+  combine(0, []);
+  results.sort((a, b) => b.score - a.score);
+  return results.slice(0, limit);
+};
+
+const getPurposeRanking = (key, limit = 10) =>
+  [...STONES].sort((a, b) => b.effects[key] - a.effects[key]).slice(0, limit);
+
 export default function App() {
   const [tab, setTab] = useState("diagnose"); // diagnose | search | mystone
   const [selected, setSelected] = useState([]);
@@ -124,12 +154,29 @@ export default function App() {
   const [result, setResult] = useState(null);
   const [showStoneSelector, setShowStoneSelector] = useState(false);
   const [selectingSlot, setSelectingSlot] = useState(null);
-  const [myStones, setMyStones] = useState([]);
+  const [myStones, setMyStones] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("stone_oracle_my_stones") || "[]"); } catch { return []; }
+  });
   const [diagMode, setDiagMode] = useState(2); // 2 or 3
   const [rankingStone, setRankingStone] = useState(null);
+  const [premiumSubTab, setPremiumSubTab] = useState("mystones"); // mystones | pattern | purpose
+  const [patternBase, setPatternBase] = useState(null);
+  const [patternSize, setPatternSize] = useState(3); // 3 or 4
+  const [purposeKey, setPurposeKey] = useState("love");
+  const [showMyStoneSelector, setShowMyStoneSelector] = useState(false);
+  const [showPatternSelector, setShowPatternSelector] = useState(false);
+  const [legalModal, setLegalModal] = useState(null); // "about" | "terms" | "privacy" | "contact" | null
   const [aiResult, setAiResult] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState(null);
+
+  const toggleMyStone = (stoneId) => {
+    setMyStones(prev => {
+      const next = prev.includes(stoneId) ? prev.filter(id => id !== stoneId) : [...prev, stoneId];
+      try { localStorage.setItem("stone_oracle_my_stones", JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
 
   const MAX_FREE = 3;
 
@@ -671,110 +718,329 @@ export default function App() {
     </div>
   );
 
-  // ★ 投げ銭URLはここを差し替えるだけ
-  const DONATION_URL = "https://ko-fi.com/YOUR_ID";
+  // ★ Googleフォームの送信先とentry IDをここで管理
+  const GOOGLE_FORM_ACTION = "https://docs.google.com/forms/d/e/1FAIpQLSd1xAjA5O52HtgOhKPatZ9fb6BY6YpJGclSJX6O8qpmrfNjiA/formResponse";
+  const GOOGLE_FORM_ENTRIES = {
+    name: "entry.1587214277",
+    email: "entry.1789214017",
+    message: "entry.782179487",
+  };
 
-  const PREMIUM_FEATURES = [
-    { icon: "💎", title: "手持ち石の登録・管理", desc: "自分のコレクションを登録して組み合わせを管理" },
-    { icon: "✨", title: "最適パターン自動生成", desc: "1石から3〜5石の最強組み合わせTop10を表示" },
-    { icon: "🎯", title: "目的別おすすめ", desc: "恋愛・仕事・癒し・金運で最適な石を提案" },
-    { icon: "🔮", title: "AI詳細鑑定", desc: "組み合わせの意味をAIが詳しく読み解く" },
+  const [contactStatus, setContactStatus] = useState("idle"); // idle | sending | sent
+  const [contactForm, setContactForm] = useState({ name: "", email: "", message: "" });
+
+  const submitContactForm = async (e) => {
+    e.preventDefault();
+    if (!contactForm.email || !contactForm.message) return;
+    setContactStatus("sending");
+    const body = new URLSearchParams();
+    body.append(GOOGLE_FORM_ENTRIES.name, contactForm.name);
+    body.append(GOOGLE_FORM_ENTRIES.email, contactForm.email);
+    body.append(GOOGLE_FORM_ENTRIES.message, contactForm.message);
+    try {
+      await fetch(GOOGLE_FORM_ACTION, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body,
+      });
+    } catch {}
+    setContactStatus("sent");
+    setContactForm({ name: "", email: "", message: "" });
+  };
+
+  const inputStyle = {
+    width: "100%", padding: "11px 14px", border: "1px solid #E0D8D0",
+    borderRadius: 10, fontSize: 13, background: "#FAFAF8", color: "#3A2E28",
+    fontFamily: "'Noto Serif JP', serif", outline: "none", boxSizing: "border-box",
+  };
+
+  const ContactForm = () => {
+    if (contactStatus === "sent") {
+      return (
+        <div style={{ textAlign: "center", padding: "30px 10px" }}>
+          <div style={{ fontSize: 32, marginBottom: 12 }}>💌</div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: "#3A2E28", fontFamily: "'Noto Serif JP', serif", marginBottom: 8 }}>送信しました</div>
+          <div style={{ fontSize: 12, color: "#8A7A6A", fontFamily: "'Noto Serif JP', serif", lineHeight: 1.7 }}>
+            お問い合わせいただきありがとうございます。<br />内容を確認のうえ、必要に応じてご連絡いたします。
+          </div>
+          <button onClick={() => { setContactStatus("idle"); setLegalModal(null); }} style={{
+            marginTop: 20, padding: "10px 28px", background: "#3A2E28", color: "#FFFDF9",
+            border: "none", borderRadius: 20, fontSize: 13, fontFamily: "'Noto Serif JP', serif",
+            fontWeight: 600, cursor: "pointer",
+          }}>閉じる</button>
+        </div>
+      );
+    }
+    return (
+      <form onSubmit={submitContactForm}>
+        <p style={{ fontSize: 12, color: "#8A7A6A", lineHeight: 1.8, marginBottom: 16, fontFamily: "'Noto Serif JP', serif" }}>
+          ご意見・ご要望・不具合報告などはこちらからお送りください。
+        </p>
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 11, color: "#8A7A6A", marginBottom: 5, fontFamily: "'Noto Serif JP', serif" }}>お名前（任意）</div>
+          <input style={inputStyle} value={contactForm.name} onChange={e => setContactForm({ ...contactForm, name: e.target.value })} />
+        </div>
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 11, color: "#8A7A6A", marginBottom: 5, fontFamily: "'Noto Serif JP', serif" }}>メールアドレス *</div>
+          <input type="email" required style={inputStyle} value={contactForm.email} onChange={e => setContactForm({ ...contactForm, email: e.target.value })} />
+        </div>
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontSize: 11, color: "#8A7A6A", marginBottom: 5, fontFamily: "'Noto Serif JP', serif" }}>お問い合わせ内容 *</div>
+          <textarea required rows={5} style={{ ...inputStyle, resize: "vertical", fontFamily: "'Noto Serif JP', serif" }} value={contactForm.message} onChange={e => setContactForm({ ...contactForm, message: e.target.value })} />
+        </div>
+        <button type="submit" disabled={contactStatus === "sending"} style={{
+          width: "100%", padding: "13px", background: contactStatus === "sending" ? "#C8B8A8" : "#3A2E28",
+          color: "#FFFDF9", border: "none", borderRadius: 14, fontSize: 13,
+          fontFamily: "'Noto Serif JP', serif", fontWeight: 600,
+          cursor: contactStatus === "sending" ? "not-allowed" : "pointer", letterSpacing: "0.05em",
+        }}>{contactStatus === "sending" ? "送信中…" : "送信する"}</button>
+      </form>
+    );
+  };
+
+  const LEGAL_CONTENT = {
+    about: {
+      title: "このサイトについて",
+      body: `「STONE ORACLE（天然石相性診断）」は、天然石を2〜3石組み合わせたときの相性を、属性やチャクラの対応をもとに算出して表示する診断ツールです。
+
+・掲載している石の意味・効果は、一般的に流通している言い伝えや慣習を参考にしたものであり、科学的な効能を保証するものではありません。
+・診断結果はエンターテインメント・参考情報としてお楽しみください。
+・「手持ち石」の登録データは、お使いの端末のブラウザ内にのみ保存され、運営者がデータを取得することはありません。`,
+    },
+    terms: {
+      title: "利用規約",
+      body: `第1条（適用）
+本規約は、本サービス「STONE ORACLE」の利用に関する条件を定めるものです。利用者は本規約に同意の上、本サービスをご利用ください。
+
+第2条（サービス内容）
+本サービスは天然石の相性診断・情報提供を目的としたツールであり、医療・心理療法等の専門的助言に代わるものではありません。
+
+第3条（禁止事項）
+本サービスのコンテンツを無断で複製・転載・再配布する行為を禁止します。
+
+第4条（免責事項）
+本サービスの診断結果を利用したことにより生じたいかなる損害についても、運営者は責任を負いません。
+
+第5条（サービスの変更・停止）
+運営者は、利用者への事前告知なく本サービスの内容を変更・停止することがあります。
+
+第6条（規約の変更）
+本規約は予告なく変更される場合があります。変更後の規約は本ページに掲載した時点で効力を生じるものとします。`,
+    },
+    privacy: {
+      title: "プライバシーポリシー",
+      body: `本サービスにおける個人情報の取り扱いについて、以下のとおり定めます。
+
+・お問い合わせフォームでご入力いただいた情報は、お問い合わせへの対応のみに使用します。
+・「手持ち石」登録データは端末のブラウザ内（localStorage）にのみ保存され、サーバーには送信されません。
+・アクセス解析のため、匿名化されたアクセスデータを取得する場合があります。
+・法令に基づく場合を除き、取得した情報を第三者に提供することはありません。`,
+    },
+  };
+
+  const PURPOSE_LIST = [
+    { key: "love", label: "恋愛運", icon: "💗" },
+    { key: "money", label: "金運", icon: "💰" },
+    { key: "healing", label: "癒し", icon: "🌿" },
+    { key: "protection", label: "守護", icon: "🛡" },
+    { key: "growth", label: "成長", icon: "🌱" },
   ];
+
+  const MiniStoneRow = ({ s, right, onClick }) => (
+    <div onClick={onClick} style={{
+      display: "flex", alignItems: "center", gap: 10,
+      background: s.bg, border: `1px solid ${s.color}33`,
+      borderRadius: 12, padding: "10px 12px", marginBottom: 8,
+      cursor: onClick ? "pointer" : "default",
+    }}>
+      <div style={{ width: 28, height: 28, borderRadius: "50%", background: s.color, opacity: 0.85, flexShrink: 0 }} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: "#3A2E28", fontFamily: "'Noto Serif JP', serif" }}>{s.name}</div>
+        <div style={{ fontSize: 10, color: "#8A7A6A", marginTop: 1 }}>{s.keywords.join(" · ")}</div>
+      </div>
+      {right}
+    </div>
+  );
+
+  const MyStonesSection = () => {
+    const owned = STONES.filter(s => myStones.includes(s.id));
+    return (
+      <div>
+        <div style={{
+          background: "linear-gradient(135deg, #FBF3E8, #F0EBF8)",
+          border: "1px solid #E8D8CC",
+          borderRadius: 14, padding: "12px 16px", marginBottom: 16,
+          fontSize: 12, color: "#8A7A6A", fontFamily: "'Noto Serif JP', serif", lineHeight: 1.7,
+        }}>
+          💎 持っている石を登録しておくと、いつでもコレクションを確認できます（{owned.length}個登録中）
+        </div>
+
+        <button onClick={() => setShowMyStoneSelector(true)} style={{
+          width: "100%", padding: "12px", marginBottom: 16,
+          background: "#3A2E28", color: "#FFFDF9", border: "none",
+          borderRadius: 14, fontSize: 13, fontFamily: "'Noto Serif JP', serif",
+          fontWeight: 600, cursor: "pointer", letterSpacing: "0.05em",
+        }}>+ 石を登録する</button>
+
+        {owned.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "30px 10px", color: "#B0A898", fontSize: 12, fontFamily: "'Noto Serif JP', serif" }}>
+            まだ石が登録されていません
+          </div>
+        ) : (
+          owned.map(s => (
+            <MiniStoneRow key={s.id} s={s} right={
+              <button onClick={() => toggleMyStone(s.id)} style={{
+                background: "none", border: "none", color: "#C85A5A", fontSize: 11,
+                cursor: "pointer", fontFamily: "'Noto Serif JP', serif", flexShrink: 0,
+              }}>削除</button>
+            } />
+          ))
+        )}
+      </div>
+    );
+  };
+
+  const PatternSection = () => {
+    const patterns = patternBase ? generatePatterns(patternBase, patternSize, 10) : [];
+    return (
+      <div>
+        <div style={{
+          background: "linear-gradient(135deg, #FBF3E8, #F0EBF8)",
+          border: "1px solid #E8D8CC",
+          borderRadius: 14, padding: "12px 16px", marginBottom: 16,
+          fontSize: 12, color: "#8A7A6A", fontFamily: "'Noto Serif JP', serif", lineHeight: 1.7,
+        }}>
+          ✨ 基準の石を1つ選ぶと、相性がいい組み合わせTOP10を自動で計算します
+        </div>
+
+        <div onClick={() => setShowPatternSelector(true)} style={{
+          border: patternBase ? `2px solid ${patternBase.color}` : "2px dashed #D4C8BC",
+          borderRadius: 14, padding: "14px", marginBottom: 12,
+          background: patternBase ? patternBase.bg : "#FAFAF8",
+          cursor: "pointer", display: "flex", alignItems: "center", gap: 10,
+        }}>
+          {patternBase ? (
+            <>
+              <div style={{ width: 32, height: 32, borderRadius: "50%", background: patternBase.color, opacity: 0.85 }} />
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#3A2E28", fontFamily: "'Noto Serif JP', serif" }}>{patternBase.name}</div>
+              <div style={{ marginLeft: "auto", fontSize: 11, color: "#B0A898" }}>タップして変更</div>
+            </>
+          ) : (
+            <div style={{ fontSize: 12, color: "#B0A898", fontFamily: "'Noto Serif JP', serif", textAlign: "center", width: "100%" }}>+ 基準の石を選ぶ</div>
+          )}
+        </div>
+
+        <div style={{ display: "flex", gap: 6, marginBottom: 16, background: "#F0EBE4", borderRadius: 12, padding: 4 }}>
+          {[3, 4].map(n => (
+            <button key={n} onClick={() => setPatternSize(n)} style={{
+              flex: 1, padding: "8px", border: "none", borderRadius: 10, cursor: "pointer",
+              background: patternSize === n ? "#FFFFFF" : "transparent",
+              color: patternSize === n ? "#3A2E28" : "#8A7A6A",
+              fontSize: 12, fontWeight: patternSize === n ? 600 : 400,
+              fontFamily: "'Noto Serif JP', serif",
+              boxShadow: patternSize === n ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
+            }}>{n}石の組み合わせ</button>
+          ))}
+        </div>
+
+        {patternBase && (
+          <div>
+            <div style={{ fontSize: 11, color: "#B0A898", letterSpacing: "0.15em", marginBottom: 10 }}>ベストパターン TOP10</div>
+            {patterns.map((p, idx) => {
+              const g = GRADE(p.score);
+              return (
+                <div key={idx} style={{
+                  background: idx < 3 ? p.stones[0].bg : "#FAFAF8",
+                  border: idx < 3 ? `1px solid ${p.stones[0].color}44` : "1px solid #EDE8E2",
+                  borderRadius: 14, padding: "12px 14px", marginBottom: 8,
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                    <div style={{ fontSize: idx < 3 ? 18 : 13, width: 26, textAlign: "center", color: "#B0A898", fontWeight: 600, flexShrink: 0 }}>
+                      {idx < 3 ? ["🥇","🥈","🥉"][idx] : idx + 1}
+                    </div>
+                    <div style={{ flex: 1, fontSize: 12, color: "#3A2E28", fontFamily: "'Noto Serif JP', serif" }}>
+                      {p.stones.map(s => s.name).join(" × ")}
+                    </div>
+                    <div style={{ textAlign: "right", flexShrink: 0 }}>
+                      <div style={{ fontSize: 17, fontWeight: 700, color: g.color, fontFamily: "Georgia, serif", lineHeight: 1 }}>{p.score}</div>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", paddingLeft: 36 }}>
+                    {p.stones.map(s => (
+                      <div key={s.id} style={{ width: 16, height: 16, borderRadius: "50%", background: s.color, opacity: 0.85 }} title={s.name} />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const PurposeSection = () => {
+    const ranked = getPurposeRanking(purposeKey, 10);
+    return (
+      <div>
+        <div style={{
+          background: "linear-gradient(135deg, #FBF3E8, #F0EBF8)",
+          border: "1px solid #E8D8CC",
+          borderRadius: 14, padding: "12px 16px", marginBottom: 16,
+          fontSize: 12, color: "#8A7A6A", fontFamily: "'Noto Serif JP', serif", lineHeight: 1.7,
+        }}>
+          🎯 叶えたい目的を選ぶと、効果が高い石をランキングで表示します
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 16 }}>
+          {PURPOSE_LIST.map(p => (
+            <button key={p.key} onClick={() => setPurposeKey(p.key)} style={{
+              padding: "10px 4px",
+              border: purposeKey === p.key ? "2px solid #C8902A" : "1px solid #EDE8E2",
+              borderRadius: 12,
+              background: purposeKey === p.key ? "#FBF3E8" : "#FAFAF8",
+              cursor: "pointer", textAlign: "center",
+            }}>
+              <div style={{ fontSize: 18, marginBottom: 4 }}>{p.icon}</div>
+              <div style={{ fontSize: 11, color: "#3A2E28", fontFamily: "'Noto Serif JP', serif" }}>{p.label}</div>
+            </button>
+          ))}
+        </div>
+
+        <div style={{ fontSize: 11, color: "#B0A898", letterSpacing: "0.15em", marginBottom: 10 }}>
+          {PURPOSE_LIST.find(p => p.key === purposeKey)?.label}が高い石 TOP10
+        </div>
+        {ranked.map((s, idx) => (
+          <MiniStoneRow key={s.id} s={s} right={
+            <div style={{ textAlign: "right", flexShrink: 0 }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: "#C8902A", fontFamily: "Georgia, serif" }}>{s.effects[purposeKey]}</div>
+            </div>
+          } />
+        ))}
+      </div>
+    );
+  };
 
   const MyStoneTab = () => (
     <div>
-      {/* Coming soon banner */}
-      <div style={{
-        background: "linear-gradient(135deg, #2A1F1A, #3A2E28)",
-        borderRadius: 20,
-        padding: "24px 20px",
-        marginBottom: 24,
-        textAlign: "center",
-        position: "relative",
-        overflow: "hidden",
-      }}>
-        <div style={{
-          position: "absolute", inset: 0,
-          background: "radial-gradient(ellipse at 70% 30%, #C8902A22, transparent 60%)",
-          pointerEvents: "none",
-        }} />
-        <div style={{ fontSize: 11, letterSpacing: "0.3em", color: "#C8902A", marginBottom: 8, fontFamily: "'Cormorant Garamond', serif" }}>COMING SOON</div>
-        <div style={{ fontSize: 22, fontWeight: 600, color: "#FFFDF9", fontFamily: "'Cormorant Garamond', serif", marginBottom: 8 }}>プレミアムプラン</div>
-        <div style={{ fontSize: 12, color: "rgba(255,253,249,0.6)", lineHeight: 1.7, fontFamily: "'Noto Serif JP', serif", marginBottom: 16 }}>
-          もっと深く、もっと便利に。<br />天然石との対話をひろげる4つの機能を開発中です。
-        </div>
-        <div style={{
-          display: "inline-block",
-          background: "rgba(200,144,42,0.2)",
-          border: "1px solid #C8902A55",
-          borderRadius: 20,
-          padding: "4px 16px",
-          fontSize: 12,
-          color: "#C8902A",
-          fontFamily: "'Noto Serif JP', serif",
-        }}>月額 500円 予定</div>
-      </div>
-
-      {/* Feature list */}
-      <div style={{ marginBottom: 24 }}>
-        <div style={{ fontSize: 11, color: "#B0A898", letterSpacing: "0.15em", marginBottom: 12 }}>開発中の機能</div>
-        {PREMIUM_FEATURES.map((f, i) => (
-          <div key={i} style={{
-            display: "flex", alignItems: "flex-start", gap: 14,
-            background: "#FAFAF8",
-            border: "1px solid #EDE8E2",
-            borderRadius: 14, padding: "14px 16px", marginBottom: 10,
-            position: "relative", overflow: "hidden",
-          }}>
-            <div style={{
-              position: "absolute", top: 0, left: 0, width: 3, height: "100%",
-              background: "linear-gradient(180deg, #C8902A, #C8902A55)",
-            }} />
-            <div style={{ fontSize: 22, flexShrink: 0 }}>{f.icon}</div>
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "#3A2E28", fontFamily: "'Noto Serif JP', serif", marginBottom: 3 }}>{f.title}</div>
-              <div style={{ fontSize: 11, color: "#8A7A6A", lineHeight: 1.6, fontFamily: "'Noto Serif JP', serif" }}>{f.desc}</div>
-            </div>
-            <div style={{
-              marginLeft: "auto", flexShrink: 0,
-              fontSize: 10, color: "#C8902A",
-              background: "#C8902A15", borderRadius: 10,
-              padding: "3px 8px", fontFamily: "'Noto Serif JP', serif",
-            }}>開発中</div>
-          </div>
+      {/* Sub tabs */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 20, background: "#F0EBE4", borderRadius: 12, padding: 4 }}>
+        {[["mystones", "手持ち石"], ["pattern", "最適パターン"], ["purpose", "目的別"]].map(([key, label]) => (
+          <button key={key} onClick={() => setPremiumSubTab(key)} style={{
+            flex: 1, padding: "8px 2px", border: "none", borderRadius: 10, cursor: "pointer",
+            background: premiumSubTab === key ? "#FFFFFF" : "transparent",
+            color: premiumSubTab === key ? "#3A2E28" : "#8A7A6A",
+            fontSize: 12, fontWeight: premiumSubTab === key ? 600 : 400,
+            fontFamily: "'Noto Serif JP', serif",
+            boxShadow: premiumSubTab === key ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
+          }}>{label}</button>
         ))}
       </div>
 
-      {/* Donation section */}
-      <div style={{
-        background: "linear-gradient(135deg, #FBF3E8, #FDF6F0)",
-        border: "1px solid #E8D8CC",
-        borderRadius: 20,
-        padding: "24px 20px",
-        textAlign: "center",
-      }}>
-        <div style={{ fontSize: 24, marginBottom: 8 }}>☕</div>
-        <div style={{ fontSize: 15, fontWeight: 600, color: "#3A2E28", fontFamily: "'Cormorant Garamond', serif", marginBottom: 8 }}>開発を応援する</div>
-        <div style={{ fontSize: 12, color: "#8A7A6A", lineHeight: 1.8, fontFamily: "'Noto Serif JP', serif", marginBottom: 16 }}>
-          このアプリが気に入ったら、開発の続きを<br />応援していただけると嬉しいです。<br />
-          <span style={{ color: "#C8902A", fontWeight: 600 }}>支援者には有料機能を先行開放予定！</span>
-        </div>
-        <a href={DONATION_URL} target="_blank" rel="noopener noreferrer" style={{
-          display: "inline-block",
-          background: "#3A2E28",
-          color: "#FFFDF9",
-          borderRadius: 25,
-          padding: "13px 32px",
-          fontSize: 13,
-          fontFamily: "'Noto Serif JP', serif",
-          fontWeight: 600,
-          textDecoration: "none",
-          letterSpacing: "0.05em",
-        }}>☕ Ko-fiで応援する</a>
-        <div style={{ marginTop: 10, fontSize: 11, color: "#B0A898", fontFamily: "'Noto Serif JP', serif" }}>
-          100円から応援できます
-        </div>
-      </div>
+      {premiumSubTab === "mystones" && <MyStonesSection />}
+      {premiumSubTab === "pattern" && <PatternSection />}
+      {premiumSubTab === "purpose" && <PurposeSection />}
     </div>
   );
 
@@ -836,6 +1102,25 @@ export default function App() {
         {tab === "mystone" && <MyStoneTab />}
       </div>
 
+      {/* Footer */}
+      <div style={{
+        maxWidth: 480, margin: "0 auto", padding: "8px 16px 32px",
+        display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "4px 14px",
+      }}>
+        {[
+          ["contact", "お問い合わせ"],
+          ["about", "このサイトについて"],
+          ["terms", "利用規約"],
+          ["privacy", "プライバシーポリシー"],
+        ].map(([key, label]) => (
+          <button key={key} onClick={() => setLegalModal(key)} style={{
+            background: "none", border: "none", cursor: "pointer",
+            fontSize: 11, color: "#B0A898", fontFamily: "'Noto Serif JP', serif",
+            textDecoration: "underline", padding: "4px 0",
+          }}>{label}</button>
+        ))}
+      </div>
+
       {/* Stone selector modal */}
       {showStoneSelector && (
         <div style={{
@@ -873,6 +1158,80 @@ export default function App() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
               {filtered.map(s => (
                 <StoneCard key={s.id} stone={s} onSelect={selectStone} selected={selected.includes(s)} />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* My-stones selector modal (multi-select) */}
+      {showMyStoneSelector && (
+        <div style={{
+          position: "fixed", inset: 0, background: "rgba(40,30,20,0.5)",
+          zIndex: 200, display: "flex", alignItems: "flex-end",
+        }} onClick={() => setShowMyStoneSelector(false)}>
+          <div onClick={e => e.stopPropagation()} style={{
+            background: "#FFFDF9",
+            borderRadius: "20px 20px 0 0",
+            padding: "20px 16px",
+            width: "100%",
+            maxHeight: "80vh",
+            overflow: "auto",
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <div style={{ fontSize: 15, fontWeight: 600, color: "#3A2E28", fontFamily: "'Noto Serif JP', serif" }}>持っている石を選択（複数可）</div>
+              <button onClick={() => setShowMyStoneSelector(false)} style={{ background: "none", border: "none", fontSize: 20, color: "#B0A898", cursor: "pointer" }}>✕</button>
+            </div>
+            <input
+              placeholder="名前・キーワードで絞り込み..."
+              value={searchQ}
+              onChange={e => setSearchQ(e.target.value)}
+              style={{
+                width: "100%", padding: "10px 14px", border: "1px solid #E0D8D0",
+                borderRadius: 10, fontSize: 13, background: "#F5F0EA", marginBottom: 12,
+                fontFamily: "'Noto Serif JP', serif", outline: "none",
+              }}
+            />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              {filtered.map(s => (
+                <StoneCard key={s.id} stone={s} onSelect={() => toggleMyStone(s.id)} selected={myStones.includes(s.id)} />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pattern base selector modal (single select) */}
+      {showPatternSelector && (
+        <div style={{
+          position: "fixed", inset: 0, background: "rgba(40,30,20,0.5)",
+          zIndex: 200, display: "flex", alignItems: "flex-end",
+        }} onClick={() => setShowPatternSelector(false)}>
+          <div onClick={e => e.stopPropagation()} style={{
+            background: "#FFFDF9",
+            borderRadius: "20px 20px 0 0",
+            padding: "20px 16px",
+            width: "100%",
+            maxHeight: "80vh",
+            overflow: "auto",
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <div style={{ fontSize: 15, fontWeight: 600, color: "#3A2E28", fontFamily: "'Noto Serif JP', serif" }}>基準の石を選択</div>
+              <button onClick={() => setShowPatternSelector(false)} style={{ background: "none", border: "none", fontSize: 20, color: "#B0A898", cursor: "pointer" }}>✕</button>
+            </div>
+            <input
+              placeholder="名前・キーワードで絞り込み..."
+              value={searchQ}
+              onChange={e => setSearchQ(e.target.value)}
+              style={{
+                width: "100%", padding: "10px 14px", border: "1px solid #E0D8D0",
+                borderRadius: 10, fontSize: 13, background: "#F5F0EA", marginBottom: 12,
+                fontFamily: "'Noto Serif JP', serif", outline: "none",
+              }}
+            />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              {filtered.map(s => (
+                <StoneCard key={s.id} stone={s} onSelect={() => { setPatternBase(s); setShowPatternSelector(false); }} selected={patternBase?.id === s.id} />
               ))}
             </div>
           </div>
@@ -917,6 +1276,38 @@ export default function App() {
                 <div style={{ fontSize: 11, color: "#8A7A6A", width: 24, textAlign: "right" }}>{detailStone.effects[k]}</div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Legal / Contact modal */}
+      {legalModal && (
+        <div style={{
+          position: "fixed", inset: 0, background: "rgba(40,30,20,0.5)",
+          zIndex: 200, display: "flex", alignItems: "flex-end",
+        }} onClick={() => setLegalModal(null)}>
+          <div onClick={e => e.stopPropagation()} style={{
+            background: "#FFFDF9",
+            borderRadius: "20px 20px 0 0",
+            padding: "24px 20px",
+            width: "100%",
+            maxHeight: "85vh",
+            overflow: "auto",
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <div style={{ fontSize: 16, fontWeight: 600, color: "#3A2E28", fontFamily: "'Noto Serif JP', serif" }}>
+                {legalModal === "contact" ? "お問い合わせ" : LEGAL_CONTENT[legalModal].title}
+              </div>
+              <button onClick={() => setLegalModal(null)} style={{ background: "none", border: "none", fontSize: 20, color: "#B0A898", cursor: "pointer" }}>✕</button>
+            </div>
+
+            {legalModal === "contact" ? (
+              <ContactForm />
+            ) : (
+              <p style={{ fontSize: 12, color: "#6A5A4A", lineHeight: 2, fontFamily: "'Noto Serif JP', serif", whiteSpace: "pre-wrap" }}>
+                {LEGAL_CONTENT[legalModal].body}
+              </p>
+            )}
           </div>
         </div>
       )}
