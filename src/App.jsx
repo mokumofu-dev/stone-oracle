@@ -1083,6 +1083,7 @@ export default function App() {
         input::placeholder { color: #C0B8B0; }
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes sheetSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        @keyframes popupFadeIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
       `}</style>
 
       {/* Header */}
@@ -1335,18 +1336,19 @@ export default function App() {
       {legalModal && (
         <div style={{
           position: "fixed", inset: 0, background: "rgba(40,30,20,0.5)",
-          zIndex: 200, display: "flex", alignItems: "flex-end",
+          zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center",
+          padding: "20px",
         }} onClick={() => setLegalModal(null)}>
           <div onClick={e => e.stopPropagation()} style={{
             background: "#FFFDF9",
-            borderRadius: "20px 20px 0 0",
+            borderRadius: "20px",
             padding: "24px 20px",
             width: "100%",
-            maxHeight: "85vh",
+            maxWidth: 420,
+            maxHeight: "80vh",
             overflow: "auto",
-            animation: "sheetSlideUp 0.25s ease-out",
+            animation: "popupFadeIn 0.2s ease-out",
           }}>
-            <div style={{ width: 40, height: 4, borderRadius: 2, background: "#E0D8D0", margin: "0 auto 16px" }} />
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
               <div style={{ fontSize: 16, fontWeight: 600, color: "#3A2E28", fontFamily: "'Noto Serif JP', serif" }}>
                 {legalModal === "contact" ? "お問い合わせ" : LEGAL_CONTENT[legalModal].title}
