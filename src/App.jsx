@@ -255,7 +255,14 @@ export default function App() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "鑑定に失敗しました");
+      if (!res.ok) {
+        if (res.status === 429 || data.error === "RATE_LIMIT") {
+          setAiError("只今アクセスが集中しています。少し時間をおいてもう一度お試しください🌙");
+        } else {
+          setAiError("鑑定に失敗しました。もう一度お試しください");
+        }
+        return;
+      }
       setAiResult(data.result);
     } catch {
       setAiError("鑑定に失敗しました。もう一度お試しください");
