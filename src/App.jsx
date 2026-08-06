@@ -671,7 +671,20 @@ export default function App() {
                 display: "flex",
                 flexDirection: "column",
                 gap: 6,
+                position: "relative",
               }}>
+                <button
+                  onClick={e => { e.stopPropagation(); setDetailStone(s); }}
+                  title="詳細を見る"
+                  style={{
+                    position: "absolute", top: 8, right: 8,
+                    width: 20, height: 20, borderRadius: "50%",
+                    background: "#C8902A18", border: "none", color: "#C8902A",
+                    fontSize: 11, cursor: "pointer",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontFamily: "Georgia, serif",
+                  }}
+                >ⓘ</button>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <div style={{ width: 32, height: 32, borderRadius: "50%", background: s.color, flexShrink: 0, opacity: 0.85 }} />
                   <div>
