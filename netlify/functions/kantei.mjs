@@ -34,7 +34,7 @@ export const handler = async (event) => {
 
   try {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+    const model = genAI.getGenerativeModel({ model: "gemini-3.1-flash-lite" });
     const response = await model.generateContent(prompt);
     const text = response.response.text().trim();
 
@@ -44,6 +44,12 @@ export const handler = async (event) => {
     };
   } catch (err) {
     console.error("Gemini API call failed:", err.message, err.stack);
+    if (err.status === 429) {
+      return {
+        statusCode: 429,
+        body: JSON.stringify({ error: "RATE_LIMIT" }),
+      };
+    }
     return {
       statusCode: 500,
       body: JSON.stringify({ error: "鑑定の生成に失敗しました: " + (err.message || "unknown error") }),
