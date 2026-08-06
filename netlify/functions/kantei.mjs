@@ -1,6 +1,8 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export const handler = async (event) => {
+  console.log("GEMINI_API_KEY exists:", Boolean(process.env.GEMINI_API_KEY));
+
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: JSON.stringify({ error: "Method Not Allowed" }) };
   }
@@ -41,6 +43,7 @@ export const handler = async (event) => {
       body: JSON.stringify({ result: text }),
     };
   } catch (err) {
+    console.error("Gemini API call failed:", err.message, err.stack);
     return {
       statusCode: 500,
       body: JSON.stringify({ error: "鑑定の生成に失敗しました: " + (err.message || "unknown error") }),
