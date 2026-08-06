@@ -1284,13 +1284,18 @@ export default function App() {
       {detailStone && (
         <div style={{
           position: "fixed", inset: 0, background: "rgba(40,30,20,0.5)",
-          zIndex: 200, display: "flex", alignItems: "flex-end",
+          zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center",
+          padding: "20px",
         }} onClick={() => setDetailStone(null)}>
           <div onClick={e => e.stopPropagation()} style={{
             background: "#FFFDF9",
-            borderRadius: "20px 20px 0 0",
+            borderRadius: "20px",
             padding: "24px 20px",
             width: "100%",
+            maxWidth: 420,
+            maxHeight: "80vh",
+            overflow: "auto",
+            animation: "popupFadeIn 0.2s ease-out",
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 16 }}>
               <div style={{ width: 52, height: 52, borderRadius: "50%", background: detailStone.color, opacity: 0.85 }} />
