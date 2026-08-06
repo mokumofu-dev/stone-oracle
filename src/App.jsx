@@ -1082,6 +1082,7 @@ export default function App() {
         * { box-sizing: border-box; margin: 0; padding: 0; }
         input::placeholder { color: #C0B8B0; }
         @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes sheetSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
       `}</style>
 
       {/* Header */}
@@ -1343,7 +1344,9 @@ export default function App() {
             width: "100%",
             maxHeight: "85vh",
             overflow: "auto",
+            animation: "sheetSlideUp 0.25s ease-out",
           }}>
+            <div style={{ width: 40, height: 4, borderRadius: 2, background: "#E0D8D0", margin: "0 auto 16px" }} />
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
               <div style={{ fontSize: 16, fontWeight: 600, color: "#3A2E28", fontFamily: "'Noto Serif JP', serif" }}>
                 {legalModal === "contact" ? "お問い合わせ" : LEGAL_CONTENT[legalModal].title}
