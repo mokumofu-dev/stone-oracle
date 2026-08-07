@@ -1,67 +1,67 @@
 import { useState, useRef } from "react";
 
 const STONES = [
-  { id: "amethyst", name: "アメジスト", en: "Amethyst", color: "#9B7FC2", bg: "#F0EBF8", element: "風", chakra: "第三の目", keywords: ["直感", "癒し", "精神"], effects: { love: 60, healing: 85, money: 40, protection: 70, growth: 80 }, desc: "精神的な成長と直感力を高める石。心を落ち着かせ、深い洞察をもたらします。" },
-  { id: "rose_quartz", name: "ローズクォーツ", en: "Rose Quartz", color: "#D4879C", bg: "#FBF0F3", element: "水", chakra: "ハート", keywords: ["愛情", "調和", "自己愛"], effects: { love: 95, healing: 75, money: 45, protection: 50, growth: 65 }, desc: "愛と美の石。自己愛を育み、人間関係に温かさと調和をもたらします。" },
-  { id: "clear_quartz", name: "水晶", en: "Clear Quartz", color: "#A8C8D8", bg: "#EEF5F8", element: "光", chakra: "全て", keywords: ["浄化", "増幅", "明晰"], effects: { love: 65, healing: 80, money: 70, protection: 75, growth: 85 }, desc: "すべてのエネルギーを増幅させるマスターヒーラー。意図を明確にします。" },
-  { id: "obsidian", name: "オブシディアン", en: "Obsidian", color: "#4A4A5A", bg: "#EBEBEF", element: "地", chakra: "ルート", keywords: ["保護", "浄化", "真実"], effects: { love: 40, healing: 65, money: 55, protection: 95, growth: 60 }, desc: "強力な保護の石。ネガティブなエネルギーを遮断し、真実を明らかにします。" },
-  { id: "lapis_lazuli", name: "ラピスラズリ", en: "Lapis Lazuli", color: "#2E5FA3", bg: "#EAF0F8", element: "水", chakra: "喉", keywords: ["知恵", "真実", "表現"], effects: { love: 55, healing: 70, money: 65, protection: 65, growth: 88 }, desc: "古代から王族に愛された知恵の石。コミュニケーション力と洞察力を高めます。" },
-  { id: "citrine", name: "シトリン", en: "Citrine", color: "#D4922A", bg: "#FBF3E8", element: "火", chakra: "太陽神経叢", keywords: ["豊かさ", "自信", "創造"], effects: { love: 55, healing: 60, money: 92, protection: 50, growth: 80 }, desc: "太陽のエネルギーを持つ豊かさの石。自信と創造力を引き出します。" },
-  { id: "moonstone", name: "ムーンストーン", en: "Moonstone", color: "#8BA0B0", bg: "#EDF1F4", element: "水", chakra: "冠", keywords: ["直感", "女性性", "変化"], effects: { love: 80, healing: 72, money: 50, protection: 55, growth: 75 }, desc: "月の女神の石。直感と女性的なエネルギーを高め、新しい始まりをサポートします。" },
-  { id: "tiger_eye", name: "タイガーアイ", en: "Tiger's Eye", color: "#B5762A", bg: "#F8F0E6", element: "火", chakra: "太陽神経叢", keywords: ["勇気", "決断", "幸運"], effects: { love: 50, healing: 58, money: 85, protection: 80, growth: 70 }, desc: "勇気と決断力をもたらす石。困難を乗り越える力と幸運を引き寄せます。" },
-  { id: "aventurine", name: "アベンチュリン", en: "Aventurine", color: "#4A9B6F", bg: "#EAF4EF", element: "地", chakra: "ハート", keywords: ["幸運", "繁栄", "機会"], effects: { love: 72, healing: 68, money: 88, protection: 60, growth: 75 }, desc: "チャンスを引き寄せる幸運の石。心を開き、新しい可能性への扉を開きます。" },
-  { id: "black_tourmaline", name: "ブラックトルマリン", en: "Black Tourmaline", color: "#3A3A4A", bg: "#EBEBEF", element: "地", chakra: "ルート", keywords: ["保護", "安定", "浄化"], effects: { love: 42, healing: 70, money: 58, protection: 98, growth: 55 }, desc: "最強の保護石。電磁波や悪いエネルギーをブロックし、心身を安定させます。" },
-  { id: "labradorite", name: "ラブラドライト", en: "Labradorite", color: "#5A7A8A", bg: "#ECF1F4", element: "風", chakra: "第三の目", keywords: ["変容", "魔法", "直感"], effects: { love: 60, healing: 75, money: 62, protection: 80, growth: 90 }, desc: "変容と魔法の石。隠れた才能を引き出し、宇宙とのつながりを深めます。" },
-  { id: "malachite", name: "マラカイト", en: "Malachite", color: "#2E8B57", bg: "#EAF4EF", element: "地", chakra: "ハート", keywords: ["変容", "保護", "感情"], effects: { love: 68, healing: 85, money: 65, protection: 82, growth: 78 }, desc: "感情の鏡とも呼ばれる変容の石。深層心理に働きかけ、真の変化をもたらします。" },
-  { id: "sodalite", name: "ソーダライト", en: "Sodalite", color: "#3455A0", bg: "#EAF0F8", element: "風", chakra: "喉", keywords: ["論理", "誠実", "平和"], effects: { love: 58, healing: 72, money: 60, protection: 65, growth: 82 }, desc: "論理と直感のバランスをとる石。誠実さと平和的なコミュニケーションを促します。" },
-  { id: "carnelian", name: "カーネリアン", en: "Carnelian", color: "#C85A2A", bg: "#FAF0EB", element: "火", chakra: "仙骨", keywords: ["情熱", "活力", "創造"], effects: { love: 70, healing: 62, money: 78, protection: 60, growth: 75 }, desc: "情熱と活力の石。創造力と行動力を高め、夢の実現をサポートします。" },
-  { id: "aquamarine", name: "アクアマリン", en: "Aquamarine", color: "#4AABBA", bg: "#EAF6F8", element: "水", chakra: "喉", keywords: ["勇気", "浄化", "表現"], effects: { love: 72, healing: 80, money: 55, protection: 65, growth: 70 }, desc: "海の女神の石。コミュニケーションを助け、心を浄化して勇気をもたらします。" },
-  { id: "garnet", name: "ガーネット", en: "Garnet", color: "#9B2335", bg: "#F5EBEc", element: "火", chakra: "ルート", keywords: ["情熱", "生命力", "絆"], effects: { love: 85, healing: 65, money: 70, protection: 72, growth: 65 }, desc: "深い愛と生命力の石。情熱的な絆を育み、活力とグラウンディングをもたらします。" },
-  { id: "fluorite", name: "フローライト", en: "Fluorite", color: "#6A5AAA", bg: "#F0EEF8", element: "風", chakra: "第三の目", keywords: ["集中", "浄化", "秩序"], effects: { love: 52, healing: 85, money: 62, protection: 75, growth: 85 }, desc: "頭脳を明晰にする集中の石。混乱を整理し、学習能力と集中力を高めます。" },
-  { id: "peridot", name: "ペリドット", en: "Peridot", color: "#7AB648", bg: "#F0F8EA", element: "地", chakra: "ハート", keywords: ["浄化", "再生", "豊かさ"], effects: { love: 65, healing: 80, money: 75, protection: 60, growth: 82 }, desc: "太陽の光を宿す浄化の石。ネガティブなパターンを断ち切り、新たな豊かさを招きます。" },
-  { id: "sunstone", name: "サンストーン", en: "Sunstone", color: "#E07830", bg: "#FBF2EA", element: "火", chakra: "太陽神経叢", keywords: ["自由", "喜び", "リーダーシップ"], effects: { love: 68, healing: 65, money: 80, protection: 55, growth: 78 }, desc: "太陽のエネルギーを持つ喜びの石。自由な精神とリーダーシップを育みます。" },
-  { id: "howlite", name: "ハウライト", en: "Howlite", color: "#B0A898", bg: "#F4F3F1", element: "風", chakra: "冠", keywords: ["静寂", "忍耐", "意識"], effects: { love: 55, healing: 88, money: 42, protection: 58, growth: 72 }, desc: "静寂と忍耐の石。怒りを鎮め、感情のコントロールと深い眠りをサポートします。" },
-  { id: "pyrite", name: "パイライト", en: "Pyrite", color: "#C8AA3A", bg: "#FAF5E8", element: "地", chakra: "太陽神経叢", keywords: ["繁栄", "保護", "意志"], effects: { love: 45, healing: 58, money: 95, protection: 85, growth: 72 }, desc: "黄金の輝きを持つ繁栄の石。強い意志力と実行力で豊かさを引き寄せます。" },
-  { id: "lepidolite", name: "レピドライト", en: "Lepidolite", color: "#A882C0", bg: "#F4EEF8", element: "風", chakra: "ハート", keywords: ["安定", "変容", "希望"], effects: { love: 65, healing: 92, money: 48, protection: 62, growth: 80 }, desc: "感情を安定させる変容の石。不安やストレスを和らげ、穏やかな変化を促します。" },
-  { id: "amazonite", name: "アマゾナイト", en: "Amazonite", color: "#4AABA0", bg: "#EAF6F5", element: "水", chakra: "ハート", keywords: ["調和", "真実", "希望"], effects: { love: 75, healing: 78, money: 60, protection: 65, growth: 75 }, desc: "希望と真実の石。内なる真実を語る勇気を与え、心に調和をもたらします。" },
-  { id: "rhodonite", name: "ロードナイト", en: "Rhodonite", color: "#C06080", bg: "#F8EEF2", element: "地", chakra: "ハート", keywords: ["愛", "赦し", "奉仕"], effects: { love: 88, healing: 80, money: 50, protection: 58, growth: 72 }, desc: "赦しと愛の石。過去の傷を癒し、無条件の愛と奉仕の精神を育みます。" },
-  { id: "prehnite", name: "プレナイト", en: "Prehnite", color: "#88B878", bg: "#EFF6EC", element: "地", chakra: "ハート", keywords: ["予知", "癒し", "平和"], effects: { love: 68, healing: 88, money: 52, protection: 70, growth: 78 }, desc: "予知と平和の石。心の平和をもたらし、直感と予知能力を高めます。" },
-  { id: "iolite", name: "アイオライト", en: "Iolite", color: "#5870B8", bg: "#ECF0F8", element: "風", chakra: "第三の目", keywords: ["方向性", "内省", "旅"], effects: { love: 58, healing: 70, money: 65, protection: 60, growth: 88 }, desc: "方向性の石。人生の道を照らし、内省と精神的な旅をサポートします。" },
-  { id: "kyanite", name: "カイヤナイト", en: "Kyanite", color: "#4878B0", bg: "#EAF2F8", element: "風", chakra: "喉", keywords: ["調和", "浄化", "表現"], effects: { love: 62, healing: 85, money: 55, protection: 70, growth: 82 }, desc: "自浄作用を持つ調和の石。チャクラを整え、真実のコミュニケーションを促します。" },
-  { id: "larimar", name: "ラリマー", en: "Larimar", color: "#58A8C8", bg: "#EAF5FA", element: "水", chakra: "喉", keywords: ["平和", "愛", "カリブ"], effects: { love: 80, healing: 88, money: 48, protection: 62, growth: 72 }, desc: "カリブ海の青を宿す平和の石。深い癒しと無条件の愛、精神的な静寂をもたらします。" },
-  { id: "moldavite", name: "モルダバイト", en: "Moldavite", color: "#3A8040", bg: "#ECF5ED", element: "宇宙", chakra: "ハート", keywords: ["変容", "宇宙", "覚醒"], effects: { love: 70, healing: 80, money: 68, protection: 65, growth: 98 }, desc: "隕石起源の変容の石。強力なエネルギーで急速な霊的成長と覚醒をもたらします。" },
-  { id: "tanzanite", name: "タンザナイト", en: "Tanzanite", color: "#4858A0", bg: "#ECEEF8", element: "風", chakra: "第三の目", keywords: ["変容", "洞察", "高次元"], effects: { love: 62, healing: 78, money: 65, protection: 68, growth: 95 }, desc: "霊的覚醒の石。高次元とのつながりを深め、深い洞察と変容をもたらします。" },
-  { id: "charoite", name: "チャロアイト", en: "Charoite", color: "#7855A0", bg: "#F0ECF8", element: "風", chakra: "冠", keywords: ["変容", "奉仕", "洞察"], effects: { love: 65, healing: 82, money: 55, protection: 72, growth: 90 }, desc: "シベリア産の変容の石。精神的な奉仕の精神と深い洞察力を目覚めさせます。" },
-  { id: "smoky_quartz", name: "スモーキークォーツ", en: "Smoky Quartz", color: "#6A5A50", bg: "#F0ECE8", element: "地", chakra: "ルート", keywords: ["浄化", "安定", "解放"], effects: { love: 48, healing: 78, money: 62, protection: 88, growth: 68 }, desc: "ネガティブなエネルギーを大地へ流す浄化の石。心身を安定させ、不安を手放す助けとなります。" },
-  { id: "selenite", name: "セレナイト", en: "Selenite", color: "#E8E0D0", bg: "#FAF8F2", element: "光", chakra: "冠", keywords: ["浄化", "平和", "純粋"], effects: { love: 55, healing: 90, money: 45, protection: 68, growth: 82 }, desc: "月の光を宿す浄化の石。空間や他の石を清め、深い精神的な平和をもたらします。" },
-  { id: "turquoise", name: "ターコイズ", en: "Turquoise", color: "#3AABA0", bg: "#EAF6F5", element: "水", chakra: "喉", keywords: ["保護", "癒し", "成功"], effects: { love: 65, healing: 82, money: 70, protection: 85, growth: 68 }, desc: "古来より旅人を守るお守りとされてきた石。癒しと成功、コミュニケーション力を高めます。" },
-  { id: "opal", name: "オパール", en: "Opal", color: "#C8B8D8", bg: "#F4EEF8", element: "水", chakra: "ハート", keywords: ["創造", "感情", "希望"], effects: { love: 78, healing: 75, money: 58, protection: 55, growth: 80 }, desc: "虹色の輝きを宿す創造の石。感情表現を豊かにし、希望とインスピレーションをもたらします。" },
-  { id: "onyx", name: "オニキス", en: "Onyx", color: "#2A2A32", bg: "#EAEAEC", element: "地", chakra: "ルート", keywords: ["意志", "保護", "集中"], effects: { love: 42, healing: 55, money: 65, protection: 92, growth: 62 }, desc: "強い意志力を支える石。困難な状況でも動じない精神力と自己コントロール力を養います。" },
-  { id: "hematite", name: "ヘマタイト", en: "Hematite", color: "#4A4448", bg: "#ECEAEB", element: "地", chakra: "ルート", keywords: ["グラウンディング", "集中", "保護"], effects: { love: 40, healing: 60, money: 68, protection: 90, growth: 58 }, desc: "強力なグラウンディング効果を持つ石。地に足をつけ、現実的な判断力を高めます。" },
-  { id: "amber", name: "アンバー", en: "Amber", color: "#D4822A", bg: "#FBF1E5", element: "火", chakra: "仙骨", keywords: ["浄化", "生命力", "太古の記憶"], effects: { love: 62, healing: 80, money: 72, protection: 75, growth: 70 }, desc: "太古の樹液が結晶化した琥珀。生命力を高め、心身を温かく浄化するお守りの石です。" },
-  { id: "jade", name: "ジェイド", en: "Jade", color: "#4A9868", bg: "#EAF5EE", element: "地", chakra: "ハート", keywords: ["幸運", "調和", "長寿"], effects: { love: 70, healing: 75, money: 82, protection: 68, growth: 72 }, desc: "東洋で古くから尊ばれてきた幸運の石。調和と繁栄、健やかな長寿をもたらすとされます。" },
-  { id: "sapphire", name: "サファイア", en: "Sapphire", color: "#2A4A9B", bg: "#EAEEF8", element: "水", chakra: "喉", keywords: ["知恵", "誠実", "運命"], effects: { love: 68, healing: 65, money: 75, protection: 78, growth: 90 }, desc: "王族に愛された知恵の石。誠実さと洞察力を高め、正しい運命の道を示すとされます。" },
-  { id: "ruby", name: "ルビー", en: "Ruby", color: "#A8203A", bg: "#F8EAEE", element: "火", chakra: "ルート", keywords: ["情熱", "生命力", "勇気"], effects: { love: 88, healing: 58, money: 78, protection: 70, growth: 68 }, desc: "燃えるような情熱を宿す石。強い生命力と勇気を与え、恋愛運を大きく高めます。" },
-  { id: "emerald", name: "エメラルド", en: "Emerald", color: "#1E8858", bg: "#E8F5EE", element: "地", chakra: "ハート", keywords: ["愛", "再生", "豊かさ"], effects: { love: 82, healing: 78, money: 80, protection: 60, growth: 75 }, desc: "永遠の愛の石として知られるエメラルド。再生と豊かさ、パートナーシップの調和を育みます。" },
-  { id: "topaz", name: "トパーズ", en: "Topaz", color: "#E0A030", bg: "#FBF4E5", element: "火", chakra: "太陽神経叢", keywords: ["成功", "自信", "喜び"], effects: { love: 60, healing: 62, money: 88, protection: 55, growth: 78 }, desc: "太陽の輝きを宿す成功の石。自信と喜びを引き出し、目標達成をサポートします。" },
-  { id: "chrysocolla", name: "クリソコラ", en: "Chrysocolla", color: "#2A9AA0", bg: "#E8F5F5", element: "水", chakra: "喉", keywords: ["癒し", "女性性", "表現"], effects: { love: 70, healing: 88, money: 55, protection: 60, growth: 75 }, desc: "女神の石とも呼ばれる癒しの石。感情の傷を優しく癒し、自己表現の力を育みます。" },
-  { id: "unakite", name: "ユナカイト", en: "Unakite", color: "#8A9868", bg: "#F0F3E8", element: "地", chakra: "ハート", keywords: ["バランス", "忍耐", "統合"], effects: { love: 68, healing: 78, money: 60, protection: 65, growth: 72 }, desc: "陰陽のバランスを整える石。忍耐強く物事に取り組む力と、心身の統合をサポートします。" },
-  { id: "azurite", name: "アズライト", en: "Azurite", color: "#2A50A0", bg: "#E8EEF8", element: "風", chakra: "第三の目", keywords: ["洞察", "覚醒", "知恵"], effects: { love: 55, healing: 72, money: 60, protection: 62, growth: 92 }, desc: "第三の目を開くとされる深い青の石。直感力と精神的な覚醒を強力に後押しします。" },
-  { id: "bloodstone", name: "ブラッドストーン", en: "Bloodstone", color: "#3A6A48", bg: "#E8F0EA", element: "地", chakra: "ルート", keywords: ["勇気", "浄化", "活力"], effects: { love: 55, healing: 75, money: 65, protection: 85, growth: 68 }, desc: "古来より勇者の石とされてきました。血流を活性化するように活力と勇気を高めます。" },
-  { id: "rhodochrosite", name: "ロードクロサイト", en: "Rhodochrosite", color: "#D0708A", bg: "#F8EEF0", element: "地", chakra: "ハート", keywords: ["自己愛", "情熱", "癒し"], effects: { love: 90, healing: 82, money: 55, protection: 55, growth: 70 }, desc: "インカの薔薇と呼ばれる情熱の石。自己愛を育み、深い心の傷を優しく癒します。" },
-  { id: "sunstone_orange", name: "レッドジャスパー", en: "Red Jasper", color: "#A8402A", bg: "#F8EBE5", element: "地", chakra: "ルート", keywords: ["活力", "忍耐", "安定"], effects: { love: 62, healing: 65, money: 68, protection: 82, growth: 62 }, desc: "大地の力強いエネルギーを持つ石。持続的な活力と忍耐力、精神的な安定をもたらします。" },
-  { id: "moss_agate", name: "モスアゲート", en: "Moss Agate", color: "#5A8858", bg: "#EEF5EC", element: "地", chakra: "ハート", keywords: ["成長", "豊穣", "新しい始まり"], effects: { love: 65, healing: 78, money: 75, protection: 62, growth: 80 }, desc: "苔のような模様を持つ成長の石。新しいプロジェクトや人間関係の始まりをサポートします。" },
-  { id: "picture_jasper", name: "ピクチャージャスパー", en: "Picture Jasper", color: "#A87848", bg: "#F5EFE5", element: "地", chakra: "ルート", keywords: ["安定", "内省", "つながり"], effects: { love: 55, healing: 70, money: 62, protection: 78, growth: 65 }, desc: "大地の景色を宿す石。自然とのつながりを感じさせ、内省と精神的な安定を促します。" },
-  { id: "blue_lace_agate", name: "ブルーレースアゲート", en: "Blue Lace Agate", color: "#7AB8D0", bg: "#EAF5FA", element: "水", chakra: "喉", keywords: ["平穏", "表現", "優しさ"], effects: { love: 65, healing: 85, money: 45, protection: 55, growth: 68 }, desc: "レース模様の優しい青の石。穏やかなコミュニケーションと心の落ち着きをもたらします。" },
-  { id: "green_aventurine_dark", name: "グリーンカルセドニー", en: "Green Chalcedony", color: "#6AA878", bg: "#EEF6EF", element: "水", chakra: "ハート", keywords: ["育成", "優しさ", "満足"], effects: { love: 68, healing: 80, money: 60, protection: 55, growth: 70 }, desc: "母なる優しさを持つ石。心を育み、日々の暮らしへの穏やかな満足感をもたらします。" },
-  { id: "obsidian_snowflake", name: "スノーフレークオブシディアン", en: "Snowflake Obsidian", color: "#3A3A42", bg: "#EBEBEE", element: "地", chakra: "ルート", keywords: ["バランス", "純粋", "気づき"], effects: { love: 45, healing: 72, money: 55, protection: 88, growth: 70 }, desc: "白い斑点模様を持つ変容の石。心のバランスを整え、無意識のパターンへの気づきを促します。" },
-  { id: "kunzite", name: "クンツァイト", en: "Kunzite", color: "#D8A0C0", bg: "#F8EEF4", element: "水", chakra: "ハート", keywords: ["無条件の愛", "平和", "感受性"], effects: { love: 92, healing: 80, money: 42, protection: 48, growth: 68 }, desc: "無条件の愛を象徴する優しいピンクの石。心を開き、深い愛と平和の感覚をもたらします。" },
-  { id: "morganite", name: "モルガナイト", en: "Morganite", color: "#E8A8B8", bg: "#FBF0F2", element: "水", chakra: "ハート", keywords: ["慈愛", "癒し", "感情の解放"], effects: { love: 88, healing: 82, money: 55, protection: 50, growth: 65 }, desc: "天使の石とも呼ばれる愛の石。深い慈愛のエネルギーで、感情のブロックを優しく解放します。" },
-  { id: "iolite_sunstone", name: "サードオニキス", en: "Sardonyx", color: "#8A5030", bg: "#F2EAE3", element: "地", chakra: "仙骨", keywords: ["意志力", "勇気", "誠実"], effects: { love: 58, healing: 60, money: 72, protection: 80, growth: 65 }, desc: "古代ローマの戦士が身につけた石。強い意志力と勇気、誠実な人間関係を育みます。" },
-  { id: "chrysoprase", name: "クリソプレーズ", en: "Chrysoprase", color: "#7AC088", bg: "#EEF8F0", element: "地", chakra: "ハート", keywords: ["喜び", "楽観", "新しい視点"], effects: { love: 72, healing: 78, money: 68, protection: 55, growth: 75 }, desc: "希望の石とも呼ばれるさわやかな緑の石。喜びと楽観性を引き出し、新しい視点を与えます。" },
-  { id: "apatite", name: "アパタイト", en: "Apatite", color: "#3AA8B0", bg: "#E8F5F6", element: "水", chakra: "喉", keywords: ["自己実現", "目標達成", "明晰さ"], effects: { love: 55, healing: 68, money: 72, protection: 50, growth: 85 }, desc: "自己実現をサポートする石。目標を明確にし、それに向かう行動力を高めてくれます。" },
-  { id: "danburite", name: "ダンビュライト", en: "Danburite", color: "#E8E0EE", bg: "#FAF8FC", element: "光", chakra: "冠", keywords: ["高次元", "純粋", "解放"], effects: { love: 62, healing: 88, money: 40, protection: 55, growth: 90 }, desc: "高い波動を持つ天使の石。純粋な意識状態へ導き、深い精神的な解放をもたらします。" },
-  { id: "celestite", name: "セレスタイト", en: "Celestite", color: "#B0C8E0", bg: "#F0F4FA", element: "光", chakra: "喉", keywords: ["天使", "平穏", "コミュニケーション"], effects: { love: 60, healing: 90, money: 42, protection: 58, growth: 82 }, desc: "天空の色を宿す平穏の石。天使とのつながりを感じさせ、深いリラックスをもたらします。" },
+  { id: "amethyst", name: "アメジスト", en: "Amethyst", color: "#9B7FC2", bg: "#F0EBF8", element: "風", chakra: "第三の目", keywords: ["直感", "癒し", "精神"], effects: { love: 60, healing: 85, money: 40, protection: 70, growth: 80 }, desc: "精神的な成長と直感力を象徴する石とされ、心を落ち着けるお守りとして親しまれています。" },
+  { id: "rose_quartz", name: "ローズクォーツ", en: "Rose Quartz", color: "#D4879C", bg: "#FBF0F3", element: "水", chakra: "ハート", keywords: ["愛情", "調和", "自己愛"], effects: { love: 95, healing: 75, money: 45, protection: 50, growth: 65 }, desc: "愛と美を象徴する石とされ、自己愛を育み、人間関係に温かさと調和をもたらすと言われています。" },
+  { id: "clear_quartz", name: "水晶", en: "Clear Quartz", color: "#A8C8D8", bg: "#EEF5F8", element: "光", chakra: "全て", keywords: ["浄化", "増幅", "明晰"], effects: { love: 65, healing: 80, money: 70, protection: 75, growth: 85 }, desc: "あらゆるエネルギーを増幅すると言われるマスターヒーラー。意図を明確にする助けになるとされています。" },
+  { id: "obsidian", name: "オブシディアン", en: "Obsidian", color: "#4A4A5A", bg: "#EBEBEF", element: "地", chakra: "ルート", keywords: ["保護", "浄化", "真実"], effects: { love: 40, healing: 65, money: 55, protection: 95, growth: 60 }, desc: "強力な保護の石とされ、ネガティブなエネルギーを遮断し、真実を明らかにすると言われています。" },
+  { id: "lapis_lazuli", name: "ラピスラズリ", en: "Lapis Lazuli", color: "#2E5FA3", bg: "#EAF0F8", element: "水", chakra: "喉", keywords: ["知恵", "真実", "表現"], effects: { love: 55, healing: 70, money: 65, protection: 65, growth: 88 }, desc: "古代から王族に愛されてきた知恵の石とされ、コミュニケーション力と洞察力を高めると言われています。" },
+  { id: "citrine", name: "シトリン", en: "Citrine", color: "#D4922A", bg: "#FBF3E8", element: "火", chakra: "太陽神経叢", keywords: ["豊かさ", "自信", "創造"], effects: { love: 55, healing: 60, money: 92, protection: 50, growth: 80 }, desc: "太陽のエネルギーを持つ豊かさの石とされ、自信と創造力を引き出すと言われています。" },
+  { id: "moonstone", name: "ムーンストーン", en: "Moonstone", color: "#8BA0B0", bg: "#EDF1F4", element: "水", chakra: "冠", keywords: ["直感", "女性性", "変化"], effects: { love: 80, healing: 72, money: 50, protection: 55, growth: 75 }, desc: "月の女神の石とされ、直感と女性的なエネルギーを象徴し、新しい始まりのお守りとして親しまれています。" },
+  { id: "tiger_eye", name: "タイガーアイ", en: "Tiger's Eye", color: "#B5762A", bg: "#F8F0E6", element: "火", chakra: "太陽神経叢", keywords: ["勇気", "決断", "幸運"], effects: { love: 50, healing: 58, money: 85, protection: 80, growth: 70 }, desc: "勇気と決断力の象徴とされる石。困難を乗り越える力と幸運を引き寄せると言われています。" },
+  { id: "aventurine", name: "アベンチュリン", en: "Aventurine", color: "#4A9B6F", bg: "#EAF4EF", element: "地", chakra: "ハート", keywords: ["幸運", "繁栄", "機会"], effects: { love: 72, healing: 68, money: 88, protection: 60, growth: 75 }, desc: "チャンスを引き寄せる幸運の石とされ、心を開き、新しい可能性への扉を開くと言われています。" },
+  { id: "black_tourmaline", name: "ブラックトルマリン", en: "Black Tourmaline", color: "#3A3A4A", bg: "#EBEBEF", element: "地", chakra: "ルート", keywords: ["保護", "安定", "浄化"], effects: { love: 42, healing: 70, money: 58, protection: 98, growth: 55 }, desc: "古くから保護のお守りとして親しまれてきた石です。ネガティブなエネルギーから守り、心身の安定を象徴するとされています。" },
+  { id: "labradorite", name: "ラブラドライト", en: "Labradorite", color: "#5A7A8A", bg: "#ECF1F4", element: "風", chakra: "第三の目", keywords: ["変容", "魔法", "直感"], effects: { love: 60, healing: 75, money: 62, protection: 80, growth: 90 }, desc: "変容と魔法の石とされ、隠れた才能を引き出し、宇宙とのつながりを深めると言われています。" },
+  { id: "malachite", name: "マラカイト", en: "Malachite", color: "#2E8B57", bg: "#EAF4EF", element: "地", chakra: "ハート", keywords: ["変容", "保護", "感情"], effects: { love: 68, healing: 85, money: 65, protection: 82, growth: 78 }, desc: "感情の鏡とも呼ばれる変容の石とされ、深層心理に働きかけ、真の変化を後押しすると言われています。" },
+  { id: "sodalite", name: "ソーダライト", en: "Sodalite", color: "#3455A0", bg: "#EAF0F8", element: "風", chakra: "喉", keywords: ["論理", "誠実", "平和"], effects: { love: 58, healing: 72, money: 60, protection: 65, growth: 82 }, desc: "論理と直感のバランスをとる石とされ、誠実さと平和的なコミュニケーションを促すと言われています。" },
+  { id: "carnelian", name: "カーネリアン", en: "Carnelian", color: "#C85A2A", bg: "#FAF0EB", element: "火", chakra: "仙骨", keywords: ["情熱", "活力", "創造"], effects: { love: 70, healing: 62, money: 78, protection: 60, growth: 75 }, desc: "情熱と活力の石とされ、創造力と行動力を高め、夢の実現を後押しすると言われています。" },
+  { id: "aquamarine", name: "アクアマリン", en: "Aquamarine", color: "#4AABBA", bg: "#EAF6F8", element: "水", chakra: "喉", keywords: ["勇気", "浄化", "表現"], effects: { love: 72, healing: 80, money: 55, protection: 65, growth: 70 }, desc: "海の女神の石とされ、コミュニケーションを助け、心を浄化して勇気をもたらすと言われています。" },
+  { id: "garnet", name: "ガーネット", en: "Garnet", color: "#9B2335", bg: "#F5EBEc", element: "火", chakra: "ルート", keywords: ["情熱", "生命力", "絆"], effects: { love: 85, healing: 65, money: 70, protection: 72, growth: 65 }, desc: "深い愛と生命力を象徴する石とされ、情熱的な絆を育み、活力とグラウンディングをもたらすと言われています。" },
+  { id: "fluorite", name: "フローライト", en: "Fluorite", color: "#6A5AAA", bg: "#F0EEF8", element: "風", chakra: "第三の目", keywords: ["集中", "浄化", "秩序"], effects: { love: 52, healing: 85, money: 62, protection: 75, growth: 85 }, desc: "頭脳を明晰にすると言われる集中の石。混乱を整理し、学習能力と集中力を高めるとされています。" },
+  { id: "peridot", name: "ペリドット", en: "Peridot", color: "#7AB648", bg: "#F0F8EA", element: "地", chakra: "ハート", keywords: ["浄化", "再生", "豊かさ"], effects: { love: 65, healing: 80, money: 75, protection: 60, growth: 82 }, desc: "太陽の光を宿す浄化の石とされ、ネガティブなパターンを手放し、新たな豊かさを招くと言われています。" },
+  { id: "sunstone", name: "サンストーン", en: "Sunstone", color: "#E07830", bg: "#FBF2EA", element: "火", chakra: "太陽神経叢", keywords: ["自由", "喜び", "リーダーシップ"], effects: { love: 68, healing: 65, money: 80, protection: 55, growth: 78 }, desc: "太陽のエネルギーを持つ喜びの石とされ、自由な精神とリーダーシップを育むと言われています。" },
+  { id: "howlite", name: "ハウライト", en: "Howlite", color: "#B0A898", bg: "#F4F3F1", element: "風", chakra: "冠", keywords: ["静寂", "忍耐", "意識"], effects: { love: 55, healing: 88, money: 42, protection: 58, growth: 72 }, desc: "静寂と忍耐の石とされ、怒りを鎮め、感情のコントロールと深い眠りのお守りとして親しまれています。" },
+  { id: "pyrite", name: "パイライト", en: "Pyrite", color: "#C8AA3A", bg: "#FAF5E8", element: "地", chakra: "太陽神経叢", keywords: ["繁栄", "保護", "意志"], effects: { love: 45, healing: 58, money: 95, protection: 85, growth: 72 }, desc: "黄金の輝きを持つ繁栄の石とされ、強い意志力と実行力で豊かさを引き寄せると言われています。" },
+  { id: "lepidolite", name: "レピドライト", en: "Lepidolite", color: "#A882C0", bg: "#F4EEF8", element: "風", chakra: "ハート", keywords: ["安定", "変容", "希望"], effects: { love: 65, healing: 92, money: 48, protection: 62, growth: 80 }, desc: "感情を安定させると言われる変容の石。心を落ち着けるお守りとして親しまれ、穏やかな変化を促すとされています。" },
+  { id: "amazonite", name: "アマゾナイト", en: "Amazonite", color: "#4AABA0", bg: "#EAF6F5", element: "水", chakra: "ハート", keywords: ["調和", "真実", "希望"], effects: { love: 75, healing: 78, money: 60, protection: 65, growth: 75 }, desc: "希望と真実の石とされ、内なる真実を語る勇気を与え、心に調和をもたらすと言われています。" },
+  { id: "rhodonite", name: "ロードナイト", en: "Rhodonite", color: "#C06080", bg: "#F8EEF2", element: "地", chakra: "ハート", keywords: ["愛", "赦し", "奉仕"], effects: { love: 88, healing: 80, money: 50, protection: 58, growth: 72 }, desc: "赦しと愛の石とされ、過去の傷を癒し、無条件の愛と奉仕の精神を育むと言われています。" },
+  { id: "prehnite", name: "プレナイト", en: "Prehnite", color: "#88B878", bg: "#EFF6EC", element: "地", chakra: "ハート", keywords: ["予知", "癒し", "平和"], effects: { love: 68, healing: 88, money: 52, protection: 70, growth: 78 }, desc: "予知と平和の石とされ、心の平和をもたらし、直感と予知能力を高めると言われています。" },
+  { id: "iolite", name: "アイオライト", en: "Iolite", color: "#5870B8", bg: "#ECF0F8", element: "風", chakra: "第三の目", keywords: ["方向性", "内省", "旅"], effects: { love: 58, healing: 70, money: 65, protection: 60, growth: 88 }, desc: "方向性の石とされ、人生の道を照らし、内省と精神的な旅のお守りとして親しまれています。" },
+  { id: "kyanite", name: "カイヤナイト", en: "Kyanite", color: "#4878B0", bg: "#EAF2F8", element: "風", chakra: "喉", keywords: ["調和", "浄化", "表現"], effects: { love: 62, healing: 85, money: 55, protection: 70, growth: 82 }, desc: "自浄作用を持つとされる調和の石。チャクラを整え、真実のコミュニケーションを促すと言われています。" },
+  { id: "larimar", name: "ラリマー", en: "Larimar", color: "#58A8C8", bg: "#EAF5FA", element: "水", chakra: "喉", keywords: ["平和", "愛", "カリブ"], effects: { love: 80, healing: 88, money: 48, protection: 62, growth: 72 }, desc: "カリブ海の青を宿す平和の石とされ、深い癒しと無条件の愛、精神的な静寂をもたらすと言われています。" },
+  { id: "moldavite", name: "モルダバイト", en: "Moldavite", color: "#3A8040", bg: "#ECF5ED", element: "宇宙", chakra: "ハート", keywords: ["変容", "宇宙", "覚醒"], effects: { love: 70, healing: 80, money: 68, protection: 65, growth: 98 }, desc: "隕石起源の変容の石とされ、強力なエネルギーで急速な霊的成長と覚醒をもたらすと言われています。" },
+  { id: "tanzanite", name: "タンザナイト", en: "Tanzanite", color: "#4858A0", bg: "#ECEEF8", element: "風", chakra: "第三の目", keywords: ["変容", "洞察", "高次元"], effects: { love: 62, healing: 78, money: 65, protection: 68, growth: 95 }, desc: "霊的覚醒の石とされ、高次元とのつながりを深め、深い洞察と変容をもたらすと言われています。" },
+  { id: "charoite", name: "チャロアイト", en: "Charoite", color: "#7855A0", bg: "#F0ECF8", element: "風", chakra: "冠", keywords: ["変容", "奉仕", "洞察"], effects: { love: 65, healing: 82, money: 55, protection: 72, growth: 90 }, desc: "シベリア産の変容の石とされ、精神的な奉仕の精神と深い洞察力を目覚めさせると言われています。" },
+  { id: "smoky_quartz", name: "スモーキークォーツ", en: "Smoky Quartz", color: "#6A5A50", bg: "#F0ECE8", element: "地", chakra: "ルート", keywords: ["浄化", "安定", "解放"], effects: { love: 48, healing: 78, money: 62, protection: 88, growth: 68 }, desc: "ネガティブなエネルギーを大地へ流すと言われる浄化の石。心身を落ち着け、不安を手放す助けになるとされています。" },
+  { id: "selenite", name: "セレナイト", en: "Selenite", color: "#E8E0D0", bg: "#FAF8F2", element: "光", chakra: "冠", keywords: ["浄化", "平和", "純粋"], effects: { love: 55, healing: 90, money: 45, protection: 68, growth: 82 }, desc: "月の光を宿す浄化の石とされ、空間や他の石を清め、深い精神的な平和をもたらすと言われています。" },
+  { id: "turquoise", name: "ターコイズ", en: "Turquoise", color: "#3AABA0", bg: "#EAF6F5", element: "水", chakra: "喉", keywords: ["保護", "癒し", "成功"], effects: { love: 65, healing: 82, money: 70, protection: 85, growth: 68 }, desc: "古来より旅人を守るお守りとされてきた石。癒しと成功、コミュニケーション力を高めると言われています。" },
+  { id: "opal", name: "オパール", en: "Opal", color: "#C8B8D8", bg: "#F4EEF8", element: "水", chakra: "ハート", keywords: ["創造", "感情", "希望"], effects: { love: 78, healing: 75, money: 58, protection: 55, growth: 80 }, desc: "虹色の輝きを宿す創造の石とされ、感情表現を豊かにし、希望とインスピレーションをもたらすと言われています。" },
+  { id: "onyx", name: "オニキス", en: "Onyx", color: "#2A2A32", bg: "#EAEAEC", element: "地", chakra: "ルート", keywords: ["意志", "保護", "集中"], effects: { love: 42, healing: 55, money: 65, protection: 92, growth: 62 }, desc: "強い意志力を象徴する石とされ、困難な状況でも動じない精神力と自己コントロール力を養うお守りとして親しまれています。" },
+  { id: "hematite", name: "ヘマタイト", en: "Hematite", color: "#4A4448", bg: "#ECEAEB", element: "地", chakra: "ルート", keywords: ["グラウンディング", "集中", "保護"], effects: { love: 40, healing: 60, money: 68, protection: 90, growth: 58 }, desc: "グラウンディング効果があるとされる石。地に足をつけ、現実的な判断力を後押しすると言われています。" },
+  { id: "amber", name: "アンバー", en: "Amber", color: "#D4822A", bg: "#FBF1E5", element: "火", chakra: "仙骨", keywords: ["浄化", "生命力", "太古の記憶"], effects: { love: 62, healing: 80, money: 72, protection: 75, growth: 70 }, desc: "太古の樹液が結晶化した琥珀。生命力を象徴し、心身を温かく浄化するお守りの石とされています。" },
+  { id: "jade", name: "ジェイド", en: "Jade", color: "#4A9868", bg: "#EAF5EE", element: "地", chakra: "ハート", keywords: ["幸運", "調和", "長寿"], effects: { love: 70, healing: 75, money: 82, protection: 68, growth: 72 }, desc: "東洋で古くから尊ばれてきた幸運の石。調和と繁栄、健やかな長寿をもたらすとされています。" },
+  { id: "sapphire", name: "サファイア", en: "Sapphire", color: "#2A4A9B", bg: "#EAEEF8", element: "水", chakra: "喉", keywords: ["知恵", "誠実", "運命"], effects: { love: 68, healing: 65, money: 75, protection: 78, growth: 90 }, desc: "王族に愛された知恵の石とされ、誠実さと洞察力を高め、正しい運命の道を示すと言われています。" },
+  { id: "ruby", name: "ルビー", en: "Ruby", color: "#A8203A", bg: "#F8EAEE", element: "火", chakra: "ルート", keywords: ["情熱", "生命力", "勇気"], effects: { love: 88, healing: 58, money: 78, protection: 70, growth: 68 }, desc: "燃えるような情熱を宿す石とされ、生命力と勇気の象徴。愛情や自己愛を象徴する石ともされています。" },
+  { id: "emerald", name: "エメラルド", en: "Emerald", color: "#1E8858", bg: "#E8F5EE", element: "地", chakra: "ハート", keywords: ["愛", "再生", "豊かさ"], effects: { love: 82, healing: 78, money: 80, protection: 60, growth: 75 }, desc: "永遠の愛の石として知られるエメラルド。再生と豊かさ、パートナーシップの調和を象徴するとされています。" },
+  { id: "topaz", name: "トパーズ", en: "Topaz", color: "#E0A030", bg: "#FBF4E5", element: "火", chakra: "太陽神経叢", keywords: ["成功", "自信", "喜び"], effects: { love: 60, healing: 62, money: 88, protection: 55, growth: 78 }, desc: "太陽の輝きを宿す成功の石とされ、自信と喜びを引き出し、目標達成を後押しすると言われています。" },
+  { id: "chrysocolla", name: "クリソコラ", en: "Chrysocolla", color: "#2A9AA0", bg: "#E8F5F5", element: "水", chakra: "喉", keywords: ["癒し", "女性性", "表現"], effects: { love: 70, healing: 88, money: 55, protection: 60, growth: 75 }, desc: "女神の石とも呼ばれる癒しの石とされ、感情の傷を優しく癒し、自己表現の力を育むお守りとされています。" },
+  { id: "unakite", name: "ユナカイト", en: "Unakite", color: "#8A9868", bg: "#F0F3E8", element: "地", chakra: "ハート", keywords: ["バランス", "忍耐", "統合"], effects: { love: 68, healing: 78, money: 60, protection: 65, growth: 72 }, desc: "陰陽のバランスを整えるとされる石。忍耐強く物事に取り組む力と、心身の統合を後押しすると言われています。" },
+  { id: "azurite", name: "アズライト", en: "Azurite", color: "#2A50A0", bg: "#E8EEF8", element: "風", chakra: "第三の目", keywords: ["洞察", "覚醒", "知恵"], effects: { love: 55, healing: 72, money: 60, protection: 62, growth: 92 }, desc: "第三の目を開くとされる深い青の石。直感力と精神的な覚醒を後押しすると言われています。" },
+  { id: "bloodstone", name: "ブラッドストーン", en: "Bloodstone", color: "#3A6A48", bg: "#E8F0EA", element: "地", chakra: "ルート", keywords: ["勇気", "浄化", "活力"], effects: { love: 55, healing: 75, money: 65, protection: 85, growth: 68 }, desc: "古来より勇者の石とされてきました。活力と勇気を象徴するお守りとして親しまれています。" },
+  { id: "rhodochrosite", name: "ロードクロサイト", en: "Rhodochrosite", color: "#D0708A", bg: "#F8EEF0", element: "地", chakra: "ハート", keywords: ["自己愛", "情熱", "癒し"], effects: { love: 90, healing: 82, money: 55, protection: 55, growth: 70 }, desc: "インカの薔薇と呼ばれる情熱の石とされ、自己愛を育み、深い心の傷を優しく癒すと言われています。" },
+  { id: "sunstone_orange", name: "レッドジャスパー", en: "Red Jasper", color: "#A8402A", bg: "#F8EBE5", element: "地", chakra: "ルート", keywords: ["活力", "忍耐", "安定"], effects: { love: 62, healing: 65, money: 68, protection: 82, growth: 62 }, desc: "大地の力強いエネルギーを持つ石とされ、持続的な活力と忍耐力、精神的な安定を象徴すると言われています。" },
+  { id: "moss_agate", name: "モスアゲート", en: "Moss Agate", color: "#5A8858", bg: "#EEF5EC", element: "地", chakra: "ハート", keywords: ["成長", "豊穣", "新しい始まり"], effects: { love: 65, healing: 78, money: 75, protection: 62, growth: 80 }, desc: "苔のような模様を持つ成長の石とされ、新しいプロジェクトや人間関係の始まりのお守りとして親しまれています。" },
+  { id: "picture_jasper", name: "ピクチャージャスパー", en: "Picture Jasper", color: "#A87848", bg: "#F5EFE5", element: "地", chakra: "ルート", keywords: ["安定", "内省", "つながり"], effects: { love: 55, healing: 70, money: 62, protection: 78, growth: 65 }, desc: "大地の景色を宿す石とされ、自然とのつながりを感じさせ、内省と精神的な安定を促すと言われています。" },
+  { id: "blue_lace_agate", name: "ブルーレースアゲート", en: "Blue Lace Agate", color: "#7AB8D0", bg: "#EAF5FA", element: "水", chakra: "喉", keywords: ["平穏", "表現", "優しさ"], effects: { love: 65, healing: 85, money: 45, protection: 55, growth: 68 }, desc: "レース模様の優しい青の石とされ、穏やかなコミュニケーションと心の落ち着きをもたらすと言われています。" },
+  { id: "green_aventurine_dark", name: "グリーンカルセドニー", en: "Green Chalcedony", color: "#6AA878", bg: "#EEF6EF", element: "水", chakra: "ハート", keywords: ["育成", "優しさ", "満足"], effects: { love: 68, healing: 80, money: 60, protection: 55, growth: 70 }, desc: "母なる優しさを象徴する石とされ、心を育み、日々の暮らしへの穏やかな満足感をもたらすと言われています。" },
+  { id: "obsidian_snowflake", name: "スノーフレークオブシディアン", en: "Snowflake Obsidian", color: "#3A3A42", bg: "#EBEBEE", element: "地", chakra: "ルート", keywords: ["バランス", "純粋", "気づき"], effects: { love: 45, healing: 72, money: 55, protection: 88, growth: 70 }, desc: "白い斑点模様を持つ変容の石とされ、心のバランスを整え、無意識のパターンへの気づきを促すと言われています。" },
+  { id: "kunzite", name: "クンツァイト", en: "Kunzite", color: "#D8A0C0", bg: "#F8EEF4", element: "水", chakra: "ハート", keywords: ["無条件の愛", "平和", "感受性"], effects: { love: 92, healing: 80, money: 42, protection: 48, growth: 68 }, desc: "無条件の愛を象徴する優しいピンクの石とされ、心を開き、深い愛と平和の感覚をもたらすと言われています。" },
+  { id: "morganite", name: "モルガナイト", en: "Morganite", color: "#E8A8B8", bg: "#FBF0F2", element: "水", chakra: "ハート", keywords: ["慈愛", "癒し", "感情の解放"], effects: { love: 88, healing: 82, money: 55, protection: 50, growth: 65 }, desc: "天使の石とも呼ばれる愛の石とされ、深い慈愛のエネルギーで、感情のブロックを優しく解放すると言われています。" },
+  { id: "iolite_sunstone", name: "サードオニキス", en: "Sardonyx", color: "#8A5030", bg: "#F2EAE3", element: "地", chakra: "仙骨", keywords: ["意志力", "勇気", "誠実"], effects: { love: 58, healing: 60, money: 72, protection: 80, growth: 65 }, desc: "古代ローマの戦士が身につけたと伝わる石。強い意志力と勇気、誠実な人間関係を象徴するとされています。" },
+  { id: "chrysoprase", name: "クリソプレーズ", en: "Chrysoprase", color: "#7AC088", bg: "#EEF8F0", element: "地", chakra: "ハート", keywords: ["喜び", "楽観", "新しい視点"], effects: { love: 72, healing: 78, money: 68, protection: 55, growth: 75 }, desc: "希望の石とも呼ばれるさわやかな緑の石とされ、喜びと楽観性を引き出し、新しい視点を与えると言われています。" },
+  { id: "apatite", name: "アパタイト", en: "Apatite", color: "#3AA8B0", bg: "#E8F5F6", element: "水", chakra: "喉", keywords: ["自己実現", "目標達成", "明晰さ"], effects: { love: 55, healing: 68, money: 72, protection: 50, growth: 85 }, desc: "自己実現をサポートすると言われる石。目標を明確にし、それに向かう行動力を高めてくれるとされています。" },
+  { id: "danburite", name: "ダンビュライト", en: "Danburite", color: "#E8E0EE", bg: "#FAF8FC", element: "光", chakra: "冠", keywords: ["高次元", "純粋", "解放"], effects: { love: 62, healing: 88, money: 40, protection: 55, growth: 90 }, desc: "高い波動を持つ天使の石とされ、純粋な意識状態へ導き、深い精神的な解放をもたらすと言われています。" },
+  { id: "celestite", name: "セレスタイト", en: "Celestite", color: "#B0C8E0", bg: "#F0F4FA", element: "光", chakra: "喉", keywords: ["天使", "平穏", "コミュニケーション"], effects: { love: 60, healing: 90, money: 42, protection: 58, growth: 82 }, desc: "天空の色を宿す平穏の石とされ、天使とのつながりを感じさせ、深いリラックスをもたらすと言われています。" },
 ];
 
 const COMPAT_RULES = [
@@ -182,6 +182,7 @@ export default function App() {
   const [aiResult, setAiResult] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState(null);
+  const [shareCopied, setShareCopied] = useState(false);
   const [infoPopup, setInfoPopup] = useState(null); // { type: 'element'|'chakra', key: string } | null
 
   const [premiumSubTab, setPremiumSubTab] = useState("mystones"); // mystones | pattern | purpose
@@ -269,6 +270,19 @@ export default function App() {
     } finally {
       setAiLoading(false);
     }
+  };
+
+  const shareResult = async (stones, score) => {
+    const text = `${stones.map(s => s.name).join("×")}の相性は${score}点でした！ #天然石相性診断 stone-oracle.netlify.app`;
+    if (navigator.share) {
+      try { await navigator.share({ text }); } catch {}
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2000);
+    } catch {}
   };
 
   const SlotCard = ({ idx }) => {
@@ -447,10 +461,13 @@ export default function App() {
         <div style={{ borderTop: "1px solid #EDE8E2", paddingTop: 16 }}>
           <div style={{ fontSize: 11, color: "#B0A898", letterSpacing: "0.15em", marginBottom: 12 }}>次に相性のいい石 TOP3</div>
           {(() => {
-            const base = stones[0];
             const best3 = STONES
               .filter(s => !stones.find(sel => sel.id === s.id))
-              .map(s => ({ ...s, compat: getCompatScore(base, s) }))
+              .map(s => {
+                const scores = stones.map(sel => getCompatScore(sel, s).score);
+                const avgScore = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+                return { ...s, compat: { score: avgScore } };
+              })
               .sort((a, b) => b.compat.score - a.compat.score)
               .slice(0, 3);
             return best3.map((s, idx) => {
@@ -476,6 +493,23 @@ export default function App() {
               );
             });
           })()}
+        </div>
+
+        {/* Share */}
+        <div style={{ marginTop: 16 }}>
+          <button onClick={() => shareResult(stones, score)} style={{
+            width: "100%",
+            padding: "12px",
+            background: "#FFFDF9",
+            color: "#3A2E28",
+            border: "1px solid #E0D8D0",
+            borderRadius: 14,
+            fontSize: 13,
+            fontFamily: "'Noto Serif JP', serif",
+            fontWeight: 600,
+            cursor: "pointer",
+            letterSpacing: "0.05em",
+          }}>{shareCopied ? "コピーしました" : "📤 結果をシェア"}</button>
         </div>
       </div>
     );
@@ -520,13 +554,14 @@ export default function App() {
     );
   };
 
-  const StoneCard = ({ stone, onSelect, selected: isSelected }) => (
-    <div onClick={() => onSelect ? onSelect(stone) : setDetailStone(stone)} style={{
+  const StoneCard = ({ stone, onSelect, selected: isSelected, disabled }) => (
+    <div onClick={() => { if (disabled) return; onSelect ? onSelect(stone) : setDetailStone(stone); }} style={{
       background: isSelected ? stone.bg : "#FAFAF8",
       border: isSelected ? `2px solid ${stone.color}` : "1px solid #EDE8E2",
       borderRadius: 14,
       padding: "14px 12px",
-      cursor: "pointer",
+      cursor: disabled ? "not-allowed" : "pointer",
+      opacity: disabled ? 0.4 : 1,
       transition: "all 0.2s",
       display: "flex",
       flexDirection: "column",
@@ -800,9 +835,9 @@ export default function App() {
       return (
         <div style={{ textAlign: "center", padding: "30px 10px" }}>
           <div style={{ fontSize: 32, marginBottom: 12 }}>💌</div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: "#3A2E28", fontFamily: "'Noto Serif JP', serif", marginBottom: 8 }}>送信しました</div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: "#3A2E28", fontFamily: "'Noto Serif JP', serif", marginBottom: 8 }}>送信リクエストを送りました</div>
           <div style={{ fontSize: 12, color: "#8A7A6A", fontFamily: "'Noto Serif JP', serif", lineHeight: 1.7 }}>
-            お問い合わせいただきありがとうございます。<br />内容を確認のうえ、必要に応じてご連絡いたします。
+            お問い合わせいただきありがとうございます。<br />反映まで時間がかかる場合があります。内容を確認のうえ、必要に応じてご連絡いたします。
           </div>
           <button onClick={() => { setContactStatus("idle"); setLegalModal(null); }} style={{
             marginTop: 20, padding: "10px 28px", background: "#3A2E28", color: "#FFFDF9",
@@ -1120,7 +1155,7 @@ export default function App() {
 
       {/* Tabs */}
       <div style={{ background: "#FFFDF9", borderBottom: "1px solid #EDE8E2", display: "flex" }}>
-        {[["diagnose", "相性診断"], ["search", "石を探す"], ["mystone", "✦ プレミアム"]].map(([key, label]) => (
+        {[["diagnose", "相性診断"], ["search", "石を探す"], ["mystone", "✦ マイストーン"]].map(([key, label]) => (
           <button key={key} onClick={() => setTab(key)} style={{
             flex: 1,
             padding: "12px 4px",
@@ -1199,7 +1234,13 @@ export default function App() {
             />
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
               {filtered.map(s => (
-                <StoneCard key={s.id} stone={s} onSelect={selectStone} selected={selected.includes(s)} />
+                <StoneCard
+                  key={s.id}
+                  stone={s}
+                  onSelect={selectStone}
+                  selected={selected.includes(s)}
+                  disabled={selected.some((sel, i) => sel && sel.id === s.id && i !== selectingSlot)}
+                />
               ))}
             </div>
           </div>
