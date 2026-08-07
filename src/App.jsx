@@ -192,11 +192,14 @@ export default function App() {
   const [selectorSource, setSelectorSource] = useState("all"); // all | mystones (diagnose stone selector)
   const [patternSource, setPatternSource] = useState("all"); // all | mystones
   const [purposeSource, setPurposeSource] = useState("all"); // all | mystones
+  const [myDiagStone1, setMyDiagStone1] = useState("");
+  const [myDiagStone2, setMyDiagStone2] = useState("");
+  const [myDiagResult, setMyDiagResult] = useState(null);
   const [showMyStoneSelector, setShowMyStoneSelector] = useState(false);
   const [showPatternSelector, setShowPatternSelector] = useState(false);
   const [legalModal, setLegalModal] = useState(null); // "about" | "terms" | "privacy" | "contact" | null
   const [contactStatus, setContactStatus] = useState("idle"); // idle | sending | sent
-  const [contactForm, setContactForm] = useState({ name: "", email: "", message: "" });
+  const [contactForm, setContactForm] = useState({ name: "", email: "", message: "", category: "" });
 
   const toggleMyStone = (stoneId) => {
     setMyStones(prev => {
@@ -252,6 +255,17 @@ export default function App() {
     }
   };
 
+  const diagnoseMyStones = () => {
+    const s1 = STONES.find(s => s.id === myDiagStone1);
+    const s2 = STONES.find(s => s.id === myDiagStone2);
+    if (!s1 || !s2 || s1.id === s2.id) return;
+    setAiResult(null);
+    setAiError(null);
+    setAiLoading(false);
+    const r = getCompatScore(s1, s2);
+    setMyDiagResult({ type: 2, ...r, stones: [s1, s2], grade: GRADE(r.score) });
+  };
+
   const fetchAiKantei = async (stones) => {
     setAiLoading(true);
     setAiError(null);
@@ -293,6 +307,49 @@ export default function App() {
     } catch {}
   };
 
+  const getExpandSuggestions = (currentStones, limit = 5) =>
+    STONES
+      .filter(s => !currentStones.find(cs => cs.id === s.id) && !myStones.includes(s.id))
+      .map(s => {
+        const scores = currentStones.map(sel => getCompatScore(sel, s).score);
+        const avgScore = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+        return { ...s, compat: { score: avgScore } };
+      })
+      .sort((a, b) => b.compat.score - a.compat.score)
+      .slice(0, limit);
+
+  const ExpandSuggestion = ({ stones }) => {
+    const suggestions = getExpandSuggestions(stones, 5);
+    if (suggestions.length === 0) return null;
+    return (
+      <div style={{ borderTop: "1px solid #EDE8E2", paddingTop: 16, marginTop: 16 }}>
+        <div style={{ fontSize: 11, color: "#B0A898", letterSpacing: "0.15em", marginBottom: 12 }}>組み合わせを広げるなら</div>
+        {suggestions.map((s, idx) => {
+          const g = GRADE(s.compat.score);
+          return (
+            <div key={s.id} style={{
+              display: "flex", alignItems: "center", gap: 10,
+              background: s.bg, border: `1px solid ${s.color}33`,
+              borderRadius: 12, padding: "10px 12px", marginBottom: 8,
+            }}>
+              <div style={{ fontSize: idx < 3 ? 16 : 12, width: 24, textAlign: "center", flexShrink: 0, color: "#B0A898", fontWeight: 600 }}>
+                {idx < 3 ? ["🥇", "🥈", "🥉"][idx] : idx + 1}
+              </div>
+              <div style={{ width: 28, height: 28, borderRadius: "50%", background: s.color, opacity: 0.85, flexShrink: 0 }} />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "#3A2E28", fontFamily: "'Noto Serif JP', serif" }}>{s.name}</div>
+                <div style={{ fontSize: 10, color: "#8A7A6A", marginTop: 1 }}>{s.keywords.join(" · ")}</div>
+              </div>
+              <div style={{ textAlign: "right", flexShrink: 0 }}>
+                <div style={{ fontSize: 16, fontWeight: 700, color: g.color, fontFamily: "Georgia, serif" }}>{s.compat.score}</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   const SlotCard = ({ idx }) => {
     const stone = selected[idx];
     return (
@@ -330,7 +387,7 @@ export default function App() {
     );
   };
 
-  const ResultView = () => {
+  const ResultView = ({ result }) => {
     if (!result) return null;
     const { score, note, stones, grade, type } = result;
     return (
@@ -639,7 +696,7 @@ export default function App() {
         相性を診断する
       </button>
 
-      <ResultView />
+      <ResultView result={result} />
     </div>
   );
 
@@ -810,16 +867,20 @@ export default function App() {
     name: "entry.1587214277",
     email: "entry.1789214017",
     message: "entry.782179487",
+    category: "entry.1647960712",
   };
+
+  const CONTACT_CATEGORIES = ["サイトについてのご意見・ご感想", "不具合報告", "石の追加リクエスト", "その他"];
 
   const submitContactForm = async (e) => {
     e.preventDefault();
-    if (!contactForm.email || !contactForm.message) return;
+    if (!contactForm.email || !contactForm.message || !contactForm.category) return;
     setContactStatus("sending");
     const body = new URLSearchParams();
     body.append(GOOGLE_FORM_ENTRIES.name, contactForm.name);
     body.append(GOOGLE_FORM_ENTRIES.email, contactForm.email);
     body.append(GOOGLE_FORM_ENTRIES.message, contactForm.message);
+    body.append(GOOGLE_FORM_ENTRIES.category, contactForm.category);
     try {
       await fetch(GOOGLE_FORM_ACTION, {
         method: "POST",
@@ -829,7 +890,7 @@ export default function App() {
       });
     } catch {}
     setContactStatus("sent");
-    setContactForm({ name: "", email: "", message: "" });
+    setContactForm({ name: "", email: "", message: "", category: "" });
   };
 
   const inputStyle = {
@@ -867,6 +928,27 @@ export default function App() {
         <div style={{ marginBottom: 12 }}>
           <div style={{ fontSize: 11, color: "#8A7A6A", marginBottom: 5, fontFamily: "'Noto Serif JP', serif" }}>メールアドレス *</div>
           <input type="email" required style={inputStyle} value={contactForm.email} onChange={e => setContactForm({ ...contactForm, email: e.target.value })} />
+        </div>
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 11, color: "#8A7A6A", marginBottom: 8, fontFamily: "'Noto Serif JP', serif" }}>お問い合わせ種別 *</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {CONTACT_CATEGORIES.map(cat => (
+              <label key={cat} style={{
+                display: "flex", alignItems: "center", gap: 8,
+                fontSize: 12, color: "#3A2E28", fontFamily: "'Noto Serif JP', serif",
+                cursor: "pointer",
+              }}>
+                <input
+                  type="radio"
+                  name="contact-category"
+                  required
+                  checked={contactForm.category === cat}
+                  onChange={() => setContactForm({ ...contactForm, category: cat })}
+                />
+                {cat}
+              </label>
+            ))}
+          </div>
         </div>
         <div style={{ marginBottom: 20 }}>
           <div style={{ fontSize: 11, color: "#8A7A6A", marginBottom: 5, fontFamily: "'Noto Serif JP', serif" }}>お問い合わせ内容 *</div>
@@ -980,6 +1062,49 @@ export default function App() {
             } />
           ))
         )}
+
+        <div style={{ borderTop: "1px solid #EDE8E2", marginTop: 20, paddingTop: 20 }}>
+          <div style={{ fontSize: 11, color: "#B0A898", letterSpacing: "0.15em", marginBottom: 12 }}>この石で相性診断する</div>
+          {owned.length < 2 ? (
+            <div style={{ textAlign: "center", padding: "20px 10px", color: "#B0A898", fontSize: 12, fontFamily: "'Noto Serif JP', serif", lineHeight: 1.7 }}>
+              あと{2 - owned.length}個石を登録してください
+            </div>
+          ) : (
+            <>
+              <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                <select value={myDiagStone1} onChange={e => setMyDiagStone1(e.target.value)} style={{
+                  flex: 1, padding: "10px 8px", border: "1px solid #E0D8D0", borderRadius: 10,
+                  fontSize: 12, background: "#FAFAF8", color: "#3A2E28", fontFamily: "'Noto Serif JP', serif",
+                }}>
+                  <option value="">1つ目の石</option>
+                  {owned.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+                <select value={myDiagStone2} onChange={e => setMyDiagStone2(e.target.value)} style={{
+                  flex: 1, padding: "10px 8px", border: "1px solid #E0D8D0", borderRadius: 10,
+                  fontSize: 12, background: "#FAFAF8", color: "#3A2E28", fontFamily: "'Noto Serif JP', serif",
+                }}>
+                  <option value="">2つ目の石</option>
+                  {owned.filter(s => s.id !== myDiagStone1).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              </div>
+              <button
+                onClick={diagnoseMyStones}
+                disabled={!myDiagStone1 || !myDiagStone2 || myDiagStone1 === myDiagStone2}
+                style={{
+                  width: "100%", padding: "12px",
+                  background: (!myDiagStone1 || !myDiagStone2 || myDiagStone1 === myDiagStone2) ? "#C8B8A8" : "#3A2E28",
+                  color: "#FFFFFF", border: "none", borderRadius: 14, fontSize: 13,
+                  fontFamily: "'Noto Serif JP', serif", fontWeight: 600,
+                  cursor: (!myDiagStone1 || !myDiagStone2 || myDiagStone1 === myDiagStone2) ? "not-allowed" : "pointer",
+                  letterSpacing: "0.05em",
+                }}
+              >この石で相性診断する</button>
+
+              <ResultView result={myDiagResult} />
+              {myDiagResult && <ExpandSuggestion stones={myDiagResult.stones} />}
+            </>
+          )}
+        </div>
       </div>
     );
   };
@@ -1086,6 +1211,7 @@ export default function App() {
                 </div>
               );
             })}
+            {patterns.length > 0 && <ExpandSuggestion stones={patterns[0].stones} />}
           </div>
         )}
       </div>
