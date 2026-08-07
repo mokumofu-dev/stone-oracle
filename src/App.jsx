@@ -116,8 +116,8 @@ const GRADE = (s) => s >= 90 ? { label: "最高の相性", color: "#C8902A" } :
 const EFFECT_LABELS = { love: "恋愛運", healing: "癒し", money: "金運", protection: "守護", growth: "成長" };
 
 // Generate top N combos of `size` stones (including base) ranked by avg pairwise compatibility
-const generatePatterns = (baseStone, size, limit = 10) => {
-  const others = STONES.filter(s => s.id !== baseStone.id);
+const generatePatterns = (baseStone, size, pool, limit = 10) => {
+  const others = pool.filter(s => s.id !== baseStone.id);
   const results = [];
 
   const combine = (start, combo) => {
@@ -142,8 +142,8 @@ const generatePatterns = (baseStone, size, limit = 10) => {
   return results.slice(0, limit);
 };
 
-const getPurposeRanking = (key, limit = 10) =>
-  [...STONES].sort((a, b) => b.effects[key] - a.effects[key]).slice(0, limit);
+const getPurposeRanking = (key, pool, limit = 10) =>
+  [...pool].sort((a, b) => b.effects[key] - a.effects[key]).slice(0, limit);
 
 const ELEMENT_INFO = {
   火: "情熱・行動力・エネルギーの属性。物事を推進する力を象徴します。",
@@ -189,6 +189,9 @@ export default function App() {
   const [patternBase, setPatternBase] = useState(null);
   const [patternSize, setPatternSize] = useState(3); // 3 or 4
   const [purposeKey, setPurposeKey] = useState("love");
+  const [selectorSource, setSelectorSource] = useState("all"); // all | mystones (diagnose stone selector)
+  const [patternSource, setPatternSource] = useState("all"); // all | mystones
+  const [purposeSource, setPurposeSource] = useState("all"); // all | mystones
   const [showMyStoneSelector, setShowMyStoneSelector] = useState(false);
   const [showPatternSelector, setShowPatternSelector] = useState(false);
   const [legalModal, setLegalModal] = useState(null); // "about" | "terms" | "privacy" | "contact" | null
@@ -213,11 +216,16 @@ export default function App() {
 
   const elements = [...new Set(STONES.map(s => s.element))];
 
+  const myStoneObjects = STONES.filter(s => myStones.includes(s.id));
+  const selectorFiltered = selectorSource === "mystones" ? filtered.filter(s => myStones.includes(s.id)) : filtered;
+  const patternFiltered = patternSource === "mystones" ? filtered.filter(s => myStones.includes(s.id)) : filtered;
+
   const openSelector = (slot) => {
     setSelectingSlot(slot);
     setShowStoneSelector(true);
     setSearchQ("");
     setFilterEl("");
+    setSelectorSource("all");
   };
 
   const selectStone = (stone) => {
@@ -977,7 +985,9 @@ export default function App() {
   };
 
   const PatternSection = () => {
-    const patterns = patternBase ? generatePatterns(patternBase, patternSize, 10) : [];
+    const patternPool = patternSource === "mystones" ? myStoneObjects : STONES;
+    const notEnoughMyStones = patternSource === "mystones" && myStones.length < patternSize;
+    const patterns = patternBase && !notEnoughMyStones ? generatePatterns(patternBase, patternSize, patternPool, 10) : [];
     return (
       <div>
         <div style={{
@@ -989,22 +999,49 @@ export default function App() {
           ✨ 基準の石を1つ選ぶと、相性がいい組み合わせTOP10を自動で計算します
         </div>
 
-        <div onClick={() => setShowPatternSelector(true)} style={{
-          border: patternBase ? `2px solid ${patternBase.color}` : "2px dashed #D4C8BC",
-          borderRadius: 14, padding: "14px", marginBottom: 12,
-          background: patternBase ? patternBase.bg : "#FAFAF8",
-          cursor: "pointer", display: "flex", alignItems: "center", gap: 10,
-        }}>
-          {patternBase ? (
-            <>
-              <div style={{ width: 32, height: 32, borderRadius: "50%", background: patternBase.color, opacity: 0.85 }} />
-              <div style={{ fontSize: 13, fontWeight: 600, color: "#3A2E28", fontFamily: "'Noto Serif JP', serif" }}>{patternBase.name}</div>
-              <div style={{ marginLeft: "auto", fontSize: 11, color: "#B0A898" }}>タップして変更</div>
-            </>
-          ) : (
-            <div style={{ fontSize: 12, color: "#B0A898", fontFamily: "'Noto Serif JP', serif", textAlign: "center", width: "100%" }}>+ 基準の石を選ぶ</div>
-          )}
+        <div style={{ display: "flex", gap: 6, marginBottom: 12, background: "#F0EBE4", borderRadius: 12, padding: 4 }}>
+          {[["all", "すべての石から選ぶ"], ["mystones", "手持ちの石から選ぶ"]].map(([key, label]) => (
+            <button key={key} onClick={() => {
+              setPatternSource(key);
+              if (key === "mystones" && patternBase && !myStones.includes(patternBase.id)) {
+                setPatternBase(null);
+              }
+            }} style={{
+              flex: 1, padding: "8px 2px", border: "none", borderRadius: 10, cursor: "pointer",
+              background: patternSource === key ? "#FFFFFF" : "transparent",
+              color: patternSource === key ? "#3A2E28" : "#8A7A6A",
+              fontSize: 12, fontWeight: patternSource === key ? 600 : 400,
+              fontFamily: "'Noto Serif JP', serif",
+              boxShadow: patternSource === key ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
+            }}>{label}</button>
+          ))}
         </div>
+
+        {notEnoughMyStones ? (
+          <div style={{
+            textAlign: "center", padding: "20px 10px", color: "#B0A898", fontSize: 12,
+            fontFamily: "'Noto Serif JP', serif", lineHeight: 1.7, marginBottom: 16,
+          }}>
+            手持ち石が{patternSize}個必要です。あと{patternSize - myStones.length}個登録してください。
+          </div>
+        ) : (
+          <div onClick={() => setShowPatternSelector(true)} style={{
+            border: patternBase ? `2px solid ${patternBase.color}` : "2px dashed #D4C8BC",
+            borderRadius: 14, padding: "14px", marginBottom: 12,
+            background: patternBase ? patternBase.bg : "#FAFAF8",
+            cursor: "pointer", display: "flex", alignItems: "center", gap: 10,
+          }}>
+            {patternBase ? (
+              <>
+                <div style={{ width: 32, height: 32, borderRadius: "50%", background: patternBase.color, opacity: 0.85 }} />
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#3A2E28", fontFamily: "'Noto Serif JP', serif" }}>{patternBase.name}</div>
+                <div style={{ marginLeft: "auto", fontSize: 11, color: "#B0A898" }}>タップして変更</div>
+              </>
+            ) : (
+              <div style={{ fontSize: 12, color: "#B0A898", fontFamily: "'Noto Serif JP', serif", textAlign: "center", width: "100%" }}>+ 基準の石を選ぶ</div>
+            )}
+          </div>
+        )}
 
         <div style={{ display: "flex", gap: 6, marginBottom: 16, background: "#F0EBE4", borderRadius: 12, padding: 4 }}>
           {[3, 4].map(n => (
@@ -1019,7 +1056,7 @@ export default function App() {
           ))}
         </div>
 
-        {patternBase && (
+        {patternBase && !notEnoughMyStones && (
           <div>
             <div style={{ fontSize: 11, color: "#B0A898", letterSpacing: "0.15em", marginBottom: 10 }}>ベストパターン TOP10</div>
             {patterns.map((p, idx) => {
@@ -1056,7 +1093,8 @@ export default function App() {
   };
 
   const PurposeSection = () => {
-    const ranked = getPurposeRanking(purposeKey, 10);
+    const purposePool = purposeSource === "mystones" ? myStoneObjects : STONES;
+    const ranked = getPurposeRanking(purposeKey, purposePool, 10);
     return (
       <div>
         <div style={{
@@ -1066,6 +1104,19 @@ export default function App() {
           fontSize: 12, color: "#8A7A6A", fontFamily: "'Noto Serif JP', serif", lineHeight: 1.7,
         }}>
           🎯 叶えたい目的を選ぶと、効果が高い石をランキングで表示します
+        </div>
+
+        <div style={{ display: "flex", gap: 6, marginBottom: 16, background: "#F0EBE4", borderRadius: 12, padding: 4 }}>
+          {[["all", "すべての石"], ["mystones", "手持ちの石のみ"]].map(([key, label]) => (
+            <button key={key} onClick={() => setPurposeSource(key)} style={{
+              flex: 1, padding: "8px 2px", border: "none", borderRadius: 10, cursor: "pointer",
+              background: purposeSource === key ? "#FFFFFF" : "transparent",
+              color: purposeSource === key ? "#3A2E28" : "#8A7A6A",
+              fontSize: 12, fontWeight: purposeSource === key ? 600 : 400,
+              fontFamily: "'Noto Serif JP', serif",
+              boxShadow: purposeSource === key ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
+            }}>{label}</button>
+          ))}
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 16 }}>
@@ -1083,16 +1134,24 @@ export default function App() {
           ))}
         </div>
 
-        <div style={{ fontSize: 11, color: "#B0A898", letterSpacing: "0.15em", marginBottom: 10 }}>
-          {PURPOSE_LIST.find(p => p.key === purposeKey)?.label}が高い石 TOP10
-        </div>
-        {ranked.map((s, idx) => (
-          <MiniStoneRow key={s.id} s={s} right={
-            <div style={{ textAlign: "right", flexShrink: 0 }}>
-              <div style={{ fontSize: 16, fontWeight: 700, color: "#C8902A", fontFamily: "Georgia, serif" }}>{s.effects[purposeKey]}</div>
+        {purposeSource === "mystones" && myStones.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "30px 10px", color: "#B0A898", fontSize: 12, fontFamily: "'Noto Serif JP', serif", lineHeight: 1.7 }}>
+            まだ石が登録されていません。<br />「マイストーン」タブから登録してください。
+          </div>
+        ) : (
+          <>
+            <div style={{ fontSize: 11, color: "#B0A898", letterSpacing: "0.15em", marginBottom: 10 }}>
+              {PURPOSE_LIST.find(p => p.key === purposeKey)?.label}が高い石 TOP10
             </div>
-          } />
-        ))}
+            {ranked.map((s, idx) => (
+              <MiniStoneRow key={s.id} s={s} right={
+                <div style={{ textAlign: "right", flexShrink: 0 }}>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: "#C8902A", fontFamily: "Georgia, serif" }}>{s.effects[purposeKey]}</div>
+                </div>
+              } />
+            ))}
+          </>
+        )}
       </div>
     );
   };
@@ -1216,6 +1275,18 @@ export default function App() {
               <div style={{ fontSize: 15, fontWeight: 600, color: "#3A2E28", fontFamily: "'Noto Serif JP', serif" }}>石を選択</div>
               <button onClick={() => setShowStoneSelector(false)} style={{ background: "none", border: "none", fontSize: 20, color: "#B0A898", cursor: "pointer" }}>✕</button>
             </div>
+            <div style={{ display: "flex", gap: 6, marginBottom: 12, background: "#F0EBE4", borderRadius: 12, padding: 4 }}>
+              {[["all", "すべての石"], ["mystones", "手持ちの石のみ"]].map(([key, label]) => (
+                <button key={key} onClick={() => setSelectorSource(key)} style={{
+                  flex: 1, padding: "7px", border: "none", borderRadius: 10, cursor: "pointer",
+                  background: selectorSource === key ? "#FFFFFF" : "transparent",
+                  color: selectorSource === key ? "#3A2E28" : "#8A7A6A",
+                  fontSize: 12, fontWeight: selectorSource === key ? 600 : 400,
+                  fontFamily: "'Noto Serif JP', serif",
+                  boxShadow: selectorSource === key ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
+                }}>{label}</button>
+              ))}
+            </div>
             <input
               placeholder="名前・キーワードで絞り込み..."
               value={searchQ}
@@ -1232,17 +1303,23 @@ export default function App() {
                 outline: "none",
               }}
             />
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-              {filtered.map(s => (
-                <StoneCard
-                  key={s.id}
-                  stone={s}
-                  onSelect={selectStone}
-                  selected={selected.includes(s)}
-                  disabled={selected.some((sel, i) => sel && sel.id === s.id && i !== selectingSlot)}
-                />
-              ))}
-            </div>
+            {selectorSource === "mystones" && myStones.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "30px 10px", color: "#B0A898", fontSize: 12, fontFamily: "'Noto Serif JP', serif", lineHeight: 1.7 }}>
+                まだ石が登録されていません。<br />「マイストーン」タブから登録してください。
+              </div>
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                {selectorFiltered.map(s => (
+                  <StoneCard
+                    key={s.id}
+                    stone={s}
+                    onSelect={selectStone}
+                    selected={selected.includes(s)}
+                    disabled={selected.some((sel, i) => sel && sel.id === s.id && i !== selectingSlot)}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1313,7 +1390,7 @@ export default function App() {
               }}
             />
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-              {filtered.map(s => (
+              {patternFiltered.map(s => (
                 <StoneCard key={s.id} stone={s} onSelect={() => { setPatternBase(s); setShowPatternSelector(false); }} selected={patternBase?.id === s.id} />
               ))}
             </div>
